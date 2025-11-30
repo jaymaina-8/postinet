@@ -1,0 +1,6 @@
+import React from "react";
+import { cn } from "@/lib/utils";
+
+export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
+  return <label className={cn("block font-medium text-sm text-zinc-700", className)} {...props} />;
+}
