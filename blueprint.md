@@ -6,11 +6,11 @@ This plan follows the SLC (Simple, Lovable, Complete) principle. It focuses only
 
 - Email/password authentication (Supabase Auth)
 - Onboarding 6-question survey, stored in `user_profile`
-- Connect Twitter/X via OAuth (only X; store in `connected_accounts`)
+- Connect social platforms via OAuth (Instagram, Facebook, YouTube; store in `connected_accounts`)
 - Upload content: image, video, or text (Supabase Storage integration)
 - AI Content Analysis (GPT-4/5): Caption, Hashtags, Title, Optimal time
 - Magic AI buttons: Regenerate, Tone, Length, Hashtag
-- "Post Now" to Twitter/X via API (store in `posts`)
+- "Post Now" to connected platforms via API (store in `posts`)
 - Content history: Drafts, posted content, simple analytics
 
 ## LOVABLE (UX That Feels Magical)
@@ -34,7 +34,7 @@ This plan follows the SLC (Simple, Lovable, Complete) principle. It focuses only
 - **auth-pages**: Implement login, signup, and redirect handling with Supabase
 - **onboarding-page**: 6-question onboarding survey page, inserts to user_profile
 - **dashboard-layout**: Sidebar/navbar, 3 main tabs (Create, Schedule, History)
-- **connect-x**: Twitter/X OAuth with access token/refresh flow, store in connected_accounts
+- **connect-platforms**: Platform OAuth with access token/refresh flow, store in connected_accounts (Instagram, Facebook, YouTube)
 - **upload-content**: UI for image/video/text uploads, store in Supabase Storage
 - **ai-analysis**: OpenAI API integration for captions, hashtags, title, and posting time; magic AI buttons
 - **post-now**: Post to X, store in posts, update history
@@ -57,14 +57,15 @@ This plan follows the SLC (Simple, Lovable, Complete) principle. It focuses only
   - `/api/ai`
   - `/api/upload`
   - `/api/post`
-  - `/api/twitter`
-- `/lib` (supabaseClient.ts, twitterClient.ts, aiClient.ts)
+  - `/api/facebook`
+  - `/api/youtube`
+- `/lib` (supabaseClient.ts, platforms.ts, aiClient.ts)
 - `/components` (Navbar.tsx, Sidebar.tsx, UploadBox.tsx, TemplateCard.tsx, PostCard.tsx, AnalyticsCard.tsx)
 - `/db` (schema for reference)
 
 ## Non-Goals
 
-- No extra platforms (only Twitter/X)
+- Multi-platform support (Instagram, Facebook, YouTube)
 - No overbuilt scheduling (Schedule tab is visual/UX placeholder only for now)
 - Templates are only for text, simple and reliable
 - No dark mode or unnecessary customization features

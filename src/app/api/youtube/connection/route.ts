@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
+import { PLATFORMS } from "@/lib/platforms";
 
 async function resolveUser(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
@@ -15,6 +16,10 @@ async function resolveUser(req: NextRequest) {
   return data.user;
 }
 
+/**
+ * DELETE: Disconnect YouTube account
+ * Removes the YouTube connection from connected_accounts
+ */
 export async function DELETE(req: NextRequest) {
   const user = await resolveUser(req);
   if (!user) {
@@ -24,7 +29,7 @@ export async function DELETE(req: NextRequest) {
   const { error } = await supabaseAdmin
     .from("connected_accounts")
     .delete()
-    .match({ user_id: user.id, platform: "twitter" });
+    .match({ user_id: user.id, platform: PLATFORMS.YOUTUBE });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -32,5 +37,10 @@ export async function DELETE(req: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
+
+
+
+
+
 
 

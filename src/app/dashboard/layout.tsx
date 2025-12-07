@@ -34,13 +34,27 @@ function Navbar() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserEmail(data?.user?.email || null);
-    });
+    supabase.auth.getUser()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('Failed to get user:', error);
+          return;
+        }
+        setUserEmail(data?.user?.email || null);
+      })
+      .catch((error) => {
+        console.warn('Error fetching user:', error);
+      });
   }, []);
   async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/auth/login");
+    try {
+      await supabase.auth.signOut();
+      router.push("/auth/login");
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still redirect even if signOut fails
+      router.push("/auth/login");
+    }
   }
   return (
     <header className="w-full h-16 border-b bg-white flex items-center px-6 justify-between">
@@ -61,26 +75,39 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function checkAuth() {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) {
+          console.warn('Auth check failed:', error);
+          router.push("/auth/login");
+          return;
+        }
+        
+        // Check onboarding status
+        const { data: profile, error: profileError } = await supabase
+          .from("user_profile")
+          .select("onboarded")
+          .eq("id", user.id)
+          .single();
+        
+        if (profileError) {
+          console.warn('Profile fetch error:', profileError);
+          // If profile doesn't exist, redirect to onboarding
+          router.push("/onboarding");
+          return;
+        }
+        
+        if (!profile?.onboarded) {
+          router.push("/onboarding");
+          return;
+        }
+        
+        setIsAuthenticated(true);
+        setLoading(false);
+      } catch (error) {
+        console.error('Auth check error:', error);
         router.push("/auth/login");
-        return;
       }
-      
-      // Check onboarding status
-      const { data: profile } = await supabase
-        .from("user_profile")
-        .select("onboarded")
-        .eq("id", user.id)
-        .single();
-      
-      if (!profile?.onboarded) {
-        router.push("/onboarding");
-        return;
-      }
-      
-      setIsAuthenticated(true);
-      setLoading(false);
     }
     
     checkAuth();
