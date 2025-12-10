@@ -83,6 +83,9 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
+        // Type assertion: connection is valid after guard check
+        const validConnection = connection as any;
+
         // Platform-specific posting handlers
         const postContent = scheduledPost.posts.ai_caption || scheduledPost.posts.content || '';
         const hashtags = scheduledPost.posts.ai_hashtags || '';
@@ -92,7 +95,7 @@ export async function POST(req: NextRequest) {
         // Route to platform-specific posting logic
         if (scheduledPost.platform === PLATFORMS.FACEBOOK) {
           // Check for Page connection
-          const fbConnection = connection as any;
+          const fbConnection = validConnection;
           if (!fbConnection.facebook_page_id || !fbConnection.facebook_page_access_token) {
             await supabaseAdmin
               .from('scheduled_posts')
@@ -158,7 +161,7 @@ export async function POST(req: NextRequest) {
             continue;
           }
         } else if (scheduledPost.platform === PLATFORMS.YOUTUBE) {
-          const conn = connection as unknown as {
+          const conn = validConnection as {
             access_token: string | null;
             refresh_token: string | null;
             expires_at: number | null;
