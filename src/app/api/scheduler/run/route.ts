@@ -63,8 +63,9 @@ export async function POST(req: NextRequest) {
           .eq('platform', scheduledPost.platform)
           .single();
 
-        if (!connection) {
-          // No platform connection - mark as failed
+        // Add a runtime guard before using connection
+        if (!connection || (connection as any).error) {
+          console.error("Invalid connection object", connection);
           await supabaseAdmin
             .from('scheduled_posts')
             .update({
@@ -157,13 +158,19 @@ export async function POST(req: NextRequest) {
             continue;
           }
         } else if (scheduledPost.platform === PLATFORMS.YOUTUBE) {
-          // Check for existing token
-          if (!connection.access_token) {
+          const conn = connection as unknown as {
+            access_token: string | null;
+            refresh_token: string | null;
+            expires_at: number | null;
+          };
+
+          // Now safe to check
+          if (!conn.access_token) {
             await supabaseAdmin
               .from('scheduled_posts')
               .update({
                 status: 'failed',
-                error_message: 'YouTube access token is missing',
+                error_message: 'Missing YouTube access token',
                 updated_at: new Date().toISOString(),
               })
               .eq('id', scheduledPost.id);
@@ -171,13 +178,13 @@ export async function POST(req: NextRequest) {
             results.push({
               id: scheduledPost.id,
               status: 'failed',
-              reason: 'YouTube access token is missing',
+              reason: 'Missing YouTube access token',
             });
             continue;
           }
 
           // Check if token is expired
-          if (connection.expires_at && connection.expires_at < Date.now()) {
+          if (conn.expires_at && conn.expires_at < Date.now()) {
             await supabaseAdmin
               .from('scheduled_posts')
               .update({
@@ -201,7 +208,7 @@ export async function POST(req: NextRequest) {
           // const response = await fetch(youtubeApiUrl, {
           //   method: 'POST',
           //   headers: {
-          //     'Authorization': `Bearer ${connection.access_token}`,
+          //     'Authorization': `Bearer ${conn.access_token}`,
           //     'Content-Type': 'application/json',
           //   },
           //   body: JSON.stringify({
