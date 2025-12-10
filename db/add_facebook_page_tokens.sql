@@ -16,3 +16,7 @@ create index if not exists connected_accounts_facebook_page_id_idx
   on connected_accounts(facebook_page_id) 
   where platform = 'facebook' and facebook_page_id is not null;
 
+
+
+
+

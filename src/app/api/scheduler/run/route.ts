@@ -3,15 +3,15 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
 import { postToFacebook } from '@/lib/facebook/postToFacebook';
 
-// This endpoint is called by Vercel Cron Job
+// This endpoint is called by GitHub Actions Cron Job
 // It processes scheduled posts that are due to be posted
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    // Verify this is called by Vercel Cron (optional security check)
-    const authHeader = req.headers.get('authorization');
+    // Verify this is called by GitHub Actions (required security check)
+    const key = req.headers.get('X-CRON-KEY');
     const cronSecret = process.env.CRON_SECRET;
     
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!key || !cronSecret || key !== cronSecret) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
