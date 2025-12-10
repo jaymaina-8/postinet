@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
           ? 'facebook_page_id, facebook_page_name, facebook_page_access_token, expires_at'
           : 'access_token, platform_user_id, expires_at';
         
-        const { data: connection } = await supabaseAdmin
+        const { data: connection, error: connectionError } = await supabaseAdmin
           .from('connected_accounts')
           .select(selectFields)
           .eq('user_id', scheduledPost.posts.user_id)
@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
           .single();
 
         // Add a runtime guard before using connection
-        if (!connection || (connection as any).error) {
-          console.error("Invalid connection object", connection);
+        if (connectionError || !connection) {
+          console.error("Invalid connection object", connectionError, connection);
           await supabaseAdmin
             .from('scheduled_posts')
             .update({
