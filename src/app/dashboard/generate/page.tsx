@@ -165,7 +165,7 @@ export default function GenerateContentPage() {
             <select
               className="w-full border border-zinc-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
               value={selectedPlatform}
-              onChange={(e) => setSelectedPlatform(e.target.value)}
+              onChange={(e) => setSelectedPlatform(e.target.value as typeof selectedPlatform)}
             >
               {platforms.map((p) => (
                 <option value={p.value} key={p.value}>{p.label}</option>
