@@ -6,18 +6,6 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Only validate at runtime, not during build
-const validateEnvVars = () => {
-  if (typeof window !== 'undefined' || process.env.NODE_ENV === 'production') {
-    if (!supabaseUrl) {
-      console.error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable.');
-    }
-    if (!supabaseAnonKey) {
-      console.error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable.');
-    }
-  }
-};
-
 // Custom fetch wrapper to handle network errors gracefully
 const customFetch = async (url: string | URL | Request, options: RequestInit = {}) => {
   try {
@@ -45,23 +33,48 @@ const customFetch = async (url: string | URL | Request, options: RequestInit = {
   }
 };
 
-export function createSupabaseClient(): SupabaseClient {
-  validateEnvVars();
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce',
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      storageKey: 'supabase.auth.token',
-    },
-    global: {
-      fetch: customFetch,
-    },
-  });
+// Lazy-initialized client instance
+let supabaseInstance: SupabaseClient | null = null;
+
+function getSupabaseClient(): SupabaseClient {
+  if (!supabaseInstance) {
+    // Only create if we have the required env vars
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.warn('Supabase environment variables not configured. Using placeholder client.');
+      // Create with placeholder URL for build time - will fail at runtime if actually used
+      supabaseInstance = createClient(
+        'https://placeholder.supabase.co',
+        'placeholder-key',
+        { auth: { persistSession: false } }
+      );
+    } else {
+      supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          flowType: 'pkce',
+          storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+          storageKey: 'supabase.auth.token',
+        },
+        global: {
+          fetch: customFetch,
+        },
+      });
+    }
+  }
+  return supabaseInstance;
 }
 
-const supabase = createSupabaseClient();
+export function createSupabaseClient(): SupabaseClient {
+  return getSupabaseClient();
+}
+
+// Export a proxy that lazily initializes the client
+const supabase = new Proxy({} as SupabaseClient, {
+  get(_, prop) {
+    return getSupabaseClient()[prop as keyof SupabaseClient];
+  },
+});
 
 export default supabase;
