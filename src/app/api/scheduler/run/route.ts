@@ -56,15 +56,16 @@ export async function POST(req: NextRequest) {
           ? 'facebook_page_id, facebook_page_name, facebook_page_access_token, expires_at'
           : 'access_token, platform_user_id, expires_at';
         
-        const { data: connection } = await supabaseAdmin
+        const { data: connection, error: connectionError } = await supabaseAdmin
           .from('connected_accounts')
           .select(selectFields)
           .eq('user_id', scheduledPost.posts.user_id)
           .eq('platform', scheduledPost.platform)
           .single();
 
-        if (!connection) {
-          // No platform connection - mark as failed
+        // Add a runtime guard before using connection
+        if (connectionError || !connection) {
+          console.error("Invalid connection object", connectionError, connection);
           await supabaseAdmin
             .from('scheduled_posts')
             .update({
@@ -82,6 +83,9 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
+        // Type assertion: connection is valid after guard check
+        const validConnection = connection as any;
+
         // Platform-specific posting handlers
         const postContent = scheduledPost.posts.ai_caption || scheduledPost.posts.content || '';
         const hashtags = scheduledPost.posts.ai_hashtags || '';
@@ -91,7 +95,7 @@ export async function POST(req: NextRequest) {
         // Route to platform-specific posting logic
         if (scheduledPost.platform === PLATFORMS.FACEBOOK) {
           // Check for Page connection
-          const fbConnection = connection as any;
+          const fbConnection = validConnection;
           if (!fbConnection.facebook_page_id || !fbConnection.facebook_page_access_token) {
             await supabaseAdmin
               .from('scheduled_posts')
@@ -157,13 +161,19 @@ export async function POST(req: NextRequest) {
             continue;
           }
         } else if (scheduledPost.platform === PLATFORMS.YOUTUBE) {
-          // Check for existing token
-          if (!connection.access_token) {
+          const conn = validConnection as {
+            access_token: string | null;
+            refresh_token: string | null;
+            expires_at: number | null;
+          };
+
+          // Now safe to check
+          if (!conn.access_token) {
             await supabaseAdmin
               .from('scheduled_posts')
               .update({
                 status: 'failed',
-                error_message: 'YouTube access token is missing',
+                error_message: 'Missing YouTube access token',
                 updated_at: new Date().toISOString(),
               })
               .eq('id', scheduledPost.id);
@@ -171,13 +181,13 @@ export async function POST(req: NextRequest) {
             results.push({
               id: scheduledPost.id,
               status: 'failed',
-              reason: 'YouTube access token is missing',
+              reason: 'Missing YouTube access token',
             });
             continue;
           }
 
           // Check if token is expired
-          if (connection.expires_at && connection.expires_at < Date.now()) {
+          if (conn.expires_at && conn.expires_at < Date.now()) {
             await supabaseAdmin
               .from('scheduled_posts')
               .update({
@@ -201,7 +211,7 @@ export async function POST(req: NextRequest) {
           // const response = await fetch(youtubeApiUrl, {
           //   method: 'POST',
           //   headers: {
-          //     'Authorization': `Bearer ${connection.access_token}`,
+          //     'Authorization': `Bearer ${conn.access_token}`,
           //     'Content-Type': 'application/json',
           //   },
           //   body: JSON.stringify({
