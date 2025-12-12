@@ -43,8 +43,8 @@
   - Returns created post ID
   - Supports both text-only and text + image posts
 
-### 6. Scheduler Integration
-- ✅ Updated `src/app/api/scheduler/run/route.ts`:
+### 6. Cron Job Integration
+- ✅ Updated `src/app/api/cron/run/route.ts`:
   - Removed Twitter/X placeholder code
   - Integrated real Facebook posting using `postToFacebook()` helper
   - Fetches Page tokens instead of user tokens for Facebook
@@ -88,7 +88,7 @@
 1. `db/supabase_migrations.sql` - Added Facebook Page columns
 2. `src/app/api/facebook/exchange/route.ts` - Added Page token fetching and storage
 3. `src/app/api/facebook/post/route.ts` - Implemented real Facebook posting
-4. `src/app/api/scheduler/run/route.ts` - Integrated Facebook posting into scheduler
+4. `src/app/api/cron/run/route.ts` - Integrated Facebook posting into cron job
 5. `src/components/ConnectFacebookCard.tsx` - Added Page info display
 6. `src/lib/facebook/oauth.ts` - Added Graph API version support
 7. `CURRENT_CAPABILITIES.md` - Removed Twitter/X, updated Facebook status
@@ -127,8 +127,8 @@ FACEBOOK_GRAPH_API_VERSION=v19.0  # Optional, defaults to v19.0
    - Facebook Graph API returns post ID
    - Post ID is stored in `posts.platform_post_id`
 
-3. **Scheduler Flow:**
-   - Vercel Cron Job calls `/api/scheduler/run` every 5 minutes
+3. **Cron Job Flow:**
+   - GitHub Actions Cron Job calls `/api/cron/run` every 5 minutes
    - Finds all scheduled posts that are due
    - For Facebook posts, fetches Page token
    - Calls `postToFacebook()` helper
@@ -142,7 +142,7 @@ FACEBOOK_GRAPH_API_VERSION=v19.0  # Optional, defaults to v19.0
 - [ ] Connect Facebook account via dashboard
 - [ ] Verify Page information displays in ConnectFacebookCard
 - [ ] Test posting via `/api/facebook/post` endpoint
-- [ ] Test scheduled posting via scheduler
+- [ ] Test scheduled posting via cron job
 - [ ] Verify posts appear on Facebook Page
 - [ ] Test with image posts
 - [ ] Test with text-only posts
@@ -174,12 +174,16 @@ FACEBOOK_GRAPH_API_VERSION=v19.0  # Optional, defaults to v19.0
 - ✅ Real Facebook Graph API integration
 - ✅ Page token management
 - ✅ Text and image posting support
-- ✅ Scheduler integration
+- ✅ Cron job integration
 - ✅ Error handling
 - ✅ UI updates
 - ✅ Database schema updates
 
 The platform now supports **full, real Facebook publishing** to Facebook Pages!
+
+
+
+
 
 
 

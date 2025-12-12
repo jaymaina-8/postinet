@@ -3,8 +3,21 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
 import { postToFacebook } from '@/lib/facebook/postToFacebook';
 
-// This endpoint is called by GitHub Actions Cron Job
-// It processes scheduled posts that are due to be posted
+/**
+ * Postinet Cron Job Endpoint
+ * 
+ * This endpoint is called by GitHub Actions Cron Job every 5 minutes.
+ * It processes scheduled posts that are due to be posted.
+ * 
+ * Endpoint: POST /api/cron/run
+ * Production URL: https://www.postinet.pro/api/cron/run
+ * 
+ * Authentication:
+ * - Requires X-CRON-KEY header matching CRON_SECRET environment variable
+ * - GitHub Actions workflow passes this via secrets.CRON_SECRET
+ * 
+ * Workflow file: .github/workflows/cron.yml
+ */
 export async function POST(req: NextRequest) {
   try {
     // Verify this is called by GitHub Actions (required security check)
@@ -12,9 +25,11 @@ export async function POST(req: NextRequest) {
     const cronSecret = process.env.CRON_SECRET;
     
     if (!key || !cronSecret || key !== cronSecret) {
+      console.error('Cron job unauthorized: Invalid or missing X-CRON-KEY');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    console.log('Cron job started at:', new Date().toISOString());
     const now = new Date();
     
     // Find all pending scheduled posts that are due
@@ -36,16 +51,19 @@ export async function POST(req: NextRequest) {
       .order('scheduled_at', { ascending: true });
 
     if (error) {
+      console.error('Failed to fetch scheduled posts:', error);
       throw error;
     }
 
     if (!duePosts || duePosts.length === 0) {
+      console.log('No posts due for posting');
       return NextResponse.json({ 
         message: 'No posts due for posting',
         processed: 0 
       });
     }
 
+    console.log(`Found ${duePosts.length} posts due for posting`);
     const results = [];
 
     for (const scheduledPost of duePosts) {
@@ -56,7 +74,7 @@ export async function POST(req: NextRequest) {
           ? 'facebook_page_id, facebook_page_name, facebook_page_access_token, expires_at'
           : 'access_token, platform_user_id, expires_at';
         
-        const { data: connection, error: connectionError } = await supabaseAdmin
+        const { data: connection } = await supabaseAdmin
           .from('connected_accounts')
           .select(selectFields)
           .eq('user_id', scheduledPost.posts.user_id)
@@ -64,8 +82,8 @@ export async function POST(req: NextRequest) {
           .single();
 
         // Add a runtime guard before using connection
-        if (connectionError || !connection) {
-          console.error("Invalid connection object", connectionError, connection);
+        if (!connection || (connection as Record<string, unknown>).error) {
+          console.error("Invalid connection object", connection);
           await supabaseAdmin
             .from('scheduled_posts')
             .update({
@@ -83,9 +101,6 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Type assertion: connection is valid after guard check
-        const validConnection = connection as any;
-
         // Platform-specific posting handlers
         const postContent = scheduledPost.posts.ai_caption || scheduledPost.posts.content || '';
         const hashtags = scheduledPost.posts.ai_hashtags || '';
@@ -95,7 +110,13 @@ export async function POST(req: NextRequest) {
         // Route to platform-specific posting logic
         if (scheduledPost.platform === PLATFORMS.FACEBOOK) {
           // Check for Page connection
-          const fbConnection = validConnection;
+          const fbConnection = connection as {
+            facebook_page_id: string | null;
+            facebook_page_name: string | null;
+            facebook_page_access_token: string | null;
+            expires_at: number | null;
+          };
+          
           if (!fbConnection.facebook_page_id || !fbConnection.facebook_page_access_token) {
             await supabaseAdmin
               .from('scheduled_posts')
@@ -135,6 +156,7 @@ export async function POST(req: NextRequest) {
 
           // Post to Facebook using helper function
           try {
+            console.log(`Posting to Facebook Page: ${fbConnection.facebook_page_name}`);
             const postResult = await postToFacebook({
               pageId: fbConnection.facebook_page_id,
               pageAccessToken: fbConnection.facebook_page_access_token,
@@ -142,13 +164,17 @@ export async function POST(req: NextRequest) {
               imageUrl: scheduledPost.posts.media_url || undefined,
             });
             platformPostId = postResult.id;
-          } catch (postError: any) {
+            console.log(`Successfully posted to Facebook: ${platformPostId}`);
+          } catch (postError: unknown) {
+            const errorMessage = postError instanceof Error ? postError.message : 'Failed to post to Facebook';
+            console.error(`Facebook posting failed:`, postError);
+            
             // Posting failed - mark as failed
             await supabaseAdmin
               .from('scheduled_posts')
               .update({
                 status: 'failed',
-                error_message: postError.message || 'Failed to post to Facebook',
+                error_message: errorMessage,
                 updated_at: new Date().toISOString(),
               })
               .eq('id', scheduledPost.id);
@@ -156,12 +182,12 @@ export async function POST(req: NextRequest) {
             results.push({
               id: scheduledPost.id,
               status: 'failed',
-              reason: postError.message || 'Failed to post to Facebook',
+              reason: errorMessage,
             });
             continue;
           }
         } else if (scheduledPost.platform === PLATFORMS.YOUTUBE) {
-          const conn = validConnection as {
+          const conn = connection as {
             access_token: string | null;
             refresh_token: string | null;
             expires_at: number | null;
@@ -207,34 +233,9 @@ export async function POST(req: NextRequest) {
 
           // TODO: Implement YouTube upload logic
           // Call YouTube Data API to upload video
-          // const youtubeApiUrl = 'https://www.googleapis.com/upload/youtube/v3/videos';
-          // const response = await fetch(youtubeApiUrl, {
-          //   method: 'POST',
-          //   headers: {
-          //     'Authorization': `Bearer ${conn.access_token}`,
-          //     'Content-Type': 'application/json',
-          //   },
-          //   body: JSON.stringify({
-          //     snippet: {
-          //       title: postContent,
-          //       description: fullContent,
-          //     },
-          //     status: {
-          //       privacyStatus: 'public',
-          //     },
-          //   }),
-          // });
-          // const result = await response.json();
-          // platformPostId = result.id;
           platformPostId = `yt_sim_${Date.now()}_${scheduledPost.id}`;
         } else if (scheduledPost.platform === PLATFORMS.INSTAGRAM) {
           // TODO: Implement Instagram posting
-          // const instagramResponse = await postToInstagram({
-          //   accessToken: connection.access_token,
-          //   caption: fullContent,
-          //   mediaUrl: scheduledPost.posts.media_url,
-          // });
-          // platformPostId = instagramResponse.mediaId;
           platformPostId = `ig_sim_${Date.now()}_${scheduledPost.id}`;
         } else {
           // Unknown platform - mark as failed
@@ -278,8 +279,10 @@ export async function POST(req: NextRequest) {
           id: scheduledPost.id,
           status: 'posted',
           postId: scheduledPost.posts.id,
+          platformPostId,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error(`Error processing scheduled post ${scheduledPost.id}:`, error);
         
         // Mark as failed
@@ -287,7 +290,7 @@ export async function POST(req: NextRequest) {
           .from('scheduled_posts')
           .update({
             status: 'failed',
-            error_message: error.message || 'Unknown error',
+            error_message: errorMessage,
             updated_at: new Date().toISOString(),
           })
           .eq('id', scheduledPost.id);
@@ -295,22 +298,41 @@ export async function POST(req: NextRequest) {
         results.push({
           id: scheduledPost.id,
           status: 'failed',
-          error: error.message,
+          error: errorMessage,
         });
       }
     }
 
+    console.log(`Cron job completed. Processed ${results.length} posts.`);
+    
     return NextResponse.json({
       message: `Processed ${duePosts.length} scheduled posts`,
       processed: results.length,
       results,
     });
-  } catch (error: any) {
-    console.error('Scheduler error:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to process scheduled posts';
+    console.error('Cron job error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to process scheduled posts' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
+}
+
+/**
+ * GET handler - returns info about the cron endpoint
+ * This is useful for health checks and documentation
+ */
+export async function GET() {
+  return NextResponse.json({
+    endpoint: '/api/cron/run',
+    method: 'POST',
+    description: 'Postinet scheduled posts processor',
+    authentication: 'Requires X-CRON-KEY header',
+    scheduler: 'GitHub Actions (.github/workflows/cron.yml)',
+    schedule: 'Every 5 minutes (*/5 * * * *)',
+    documentation: 'See CRON_SETUP.md for setup instructions',
+  });
 }
 

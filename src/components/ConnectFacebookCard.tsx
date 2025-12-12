@@ -23,19 +23,25 @@ export default function ConnectFacebookCard() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchConnection();
     
     // Check for OAuth callback results
+    // Support both 'facebook_connected' (legacy) and 'facebook=connected' (new)
     const facebookConnected = searchParams.get('facebook_connected');
+    const facebookParam = searchParams.get('facebook');
     const facebookError = searchParams.get('facebook_error');
     
-    if (facebookConnected === 'true') {
+    if (facebookConnected === 'true' || facebookParam === 'connected') {
       // Refresh connection status after successful OAuth
       fetchConnection();
+      setSuccessMessage('Facebook connected successfully!');
       // Clear the URL parameter
       window.history.replaceState({}, '', window.location.pathname);
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
     }
     
     if (facebookError) {
@@ -67,11 +73,9 @@ export default function ConnectFacebookCard() {
     try {
       setActionLoading(true);
       setError(null);
+      setSuccessMessage(null);
       
-      // Get the redirect URI from environment (client-side will use window.location.origin)
-      const redirectUri = `${window.location.origin}/api/facebook/exchange`;
-      
-      // Call API to get Facebook OAuth URL
+      // Get the session to verify user is logged in
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -81,6 +85,7 @@ export default function ConnectFacebookCard() {
         return;
       }
 
+      // Call API to get Facebook OAuth URL
       const response = await fetch("/api/facebook/auth-url", {
         method: "GET",
         headers: {
@@ -97,9 +102,10 @@ export default function ConnectFacebookCard() {
       
       // Redirect to Facebook OAuth
       window.location.href = authUrl;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unable to start Facebook OAuth.";
       console.error(err);
-      setError(err.message || "Unable to start Facebook OAuth.");
+      setError(errorMessage);
       setActionLoading(false);
     }
   }
@@ -108,6 +114,7 @@ export default function ConnectFacebookCard() {
     try {
       setActionLoading(true);
       setError(null);
+      setSuccessMessage(null);
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -126,9 +133,12 @@ export default function ConnectFacebookCard() {
         throw new Error(body.error || "Failed to disconnect account.");
       }
       setAccount(null);
-    } catch (err: any) {
+      setSuccessMessage('Facebook disconnected successfully.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to disconnect account.";
       console.error(err);
-      setError(err.message || "Failed to disconnect account.");
+      setError(errorMessage);
     } finally {
       setActionLoading(false);
     }
@@ -186,11 +196,11 @@ export default function ConnectFacebookCard() {
             </Button>
           </div>
         )}
+        {successMessage && (
+          <p className="text-sm text-green-600">{successMessage}</p>
+        )}
         {error && <p className="text-sm text-red-500">{error}</p>}
       </CardContent>
     </Card>
   );
 }
-
-
-

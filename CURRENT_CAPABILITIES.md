@@ -73,7 +73,7 @@
 - ✅ Schedule posts for future dates/times
 - ✅ View all scheduled posts
 - ✅ Cancel scheduled posts
-- ✅ Automatic processing via Vercel Cron Job (every 5 minutes)
+- ✅ Automatic processing via GitHub Actions Cron Job (every 5 minutes)
 - ✅ Status tracking (pending, posted, failed, cancelled)
 - ✅ **Facebook posting**: Fully implemented and working
 
@@ -223,7 +223,7 @@ To get everything working:
 - [ ] Run `db/seed_templates.sql` to add starter templates
 - [ ] Create `content` bucket in Supabase Storage (see `db/storage_setup.md`)
 - [ ] Set `OPENAI_API_KEY` in environment variables
-- [ ] Deploy to Vercel and configure cron job (see `CRON_SETUP.md`)
+- [ ] Deploy to Vercel and configure GitHub Actions cron job (see `CRON_SETUP.md`)
 - [ ] (Optional) Set `CRON_SECRET` for cron job security
 
 Next steps:

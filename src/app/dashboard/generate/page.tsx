@@ -2,9 +2,13 @@
 
 import React, { useState } from 'react';
 import supabase from '@/lib/supabaseClient';
-import { PLATFORM_LIST } from '@/lib/platforms';
 
-const platforms = PLATFORM_LIST;
+const platforms = [
+  { label: 'Twitter/X', value: 'twitter' },
+  { label: 'Instagram', value: 'instagram' },
+  { label: 'TikTok', value: 'tiktok' },
+  { label: 'YouTube', value: 'youtube' },
+];
 
 export default function GenerateContentPage() {
   const [inputText, setInputText] = useState('');
@@ -165,7 +169,7 @@ export default function GenerateContentPage() {
             <select
               className="w-full border border-zinc-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
               value={selectedPlatform}
-              onChange={(e) => setSelectedPlatform(e.target.value as typeof selectedPlatform)}
+              onChange={(e) => setSelectedPlatform(e.target.value)}
             >
               {platforms.map((p) => (
                 <option value={p.value} key={p.value}>{p.label}</option>

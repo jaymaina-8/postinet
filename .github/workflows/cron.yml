@@ -1,0 +1,62 @@
+# ===========================================
+# POSTINET AI - GitHub Actions Cron Job
+# ===========================================
+# This workflow runs every 5 minutes to process scheduled posts.
+# It triggers the /api/cron/run endpoint on the production server.
+#
+# Production URL: https://www.postinet.pro
+# Cron endpoint: https://www.postinet.pro/api/cron/run
+#
+# Required Secrets:
+# - CRON_SECRET: Secret key for authenticating cron requests
+#
+# ===========================================
+
+name: Postinet Cron Job
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: "*/5 * * * *"
+  
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  trigger-cron:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Trigger Postinet Cron Endpoint
+        run: |
+          echo "Triggering Postinet cron job at $(date -u)"
+          
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://www.postinet.pro/api/cron/run" \
+            -H "Content-Type: application/json" \
+            -H "X-CRON-KEY: ${{ secrets.CRON_SECRET }}")
+          
+          # Extract HTTP status code (last line)
+          http_code=$(echo "$response" | tail -n1)
+          # Extract response body (all but last line)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+          
+          # Fail the job if the request was not successful
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "❌ Cron job failed with HTTP status $http_code"
+            exit 1
+          fi
+          
+          echo "✅ Cron job completed successfully"
+
+      - name: Log Completion
+        if: success()
+        run: echo "Cron job finished at $(date -u)"
+        
+      - name: Log Failure
+        if: failure()
+        run: echo "Cron job failed at $(date -u)"
+

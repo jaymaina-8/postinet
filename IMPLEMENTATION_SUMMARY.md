@@ -52,17 +52,18 @@
 **Database Migration:**
 - Run updated `db/supabase_migrations.sql` to create `scheduled_posts` table
 
-### 6. Vercel Cron Job
-- ✅ Created `/api/scheduler/run` endpoint
-- ✅ Configured `vercel.json` with cron job (runs every 5 minutes)
+### 6. GitHub Actions Cron Job
+- ✅ Created `/api/cron/run` endpoint
+- ✅ Configured `.github/workflows/cron.yml` (runs every 5 minutes)
 - ✅ Processes scheduled posts that are due
 - ✅ Facebook posting fully implemented
 - ✅ Error handling and status updates
 
 **Setup Required:**
-1. Deploy to Vercel
-2. Verify cron job in Vercel Dashboard (Settings → Cron Jobs)
-3. Optionally set `CRON_SECRET` environment variable for security
+1. Add `CRON_SECRET` to GitHub repository secrets
+2. Add `CRON_SECRET` to production environment variables
+3. Verify workflow is enabled in GitHub Actions
+4. See `CRON_SETUP.md` for detailed instructions
 
 ## 📋 Next Steps
 
@@ -93,9 +94,9 @@
    CRON_SECRET=your_optional_cron_secret
    ```
 
-5. **Vercel Deployment**
-   - Deploy to Vercel
-   - Verify cron job configuration
+5. **GitHub Actions Setup**
+   - Add `CRON_SECRET` to GitHub repository secrets
+   - Enable GitHub Actions workflow
    - See: `CRON_SETUP.md`
 
 ### Next Steps
@@ -122,7 +123,7 @@
 - `POST /api/templates` - Create template (requires auth)
 - `PUT /api/templates` - Update template (requires auth)
 - `DELETE /api/templates` - Delete template (requires auth)
-- `GET /api/scheduler/run` - Cron job endpoint (called by Vercel)
+- `POST /api/cron/run` - Cron job endpoint (called by GitHub Actions)
 
 ## 📁 Files Created/Modified
 
@@ -131,14 +132,14 @@
 - `src/app/api/upload/route.ts` - Upload endpoint
 - `src/app/api/posts/route.ts` - Posts endpoint
 - `src/app/api/schedule/route.ts` - Scheduling endpoint
-- `src/app/api/scheduler/run/route.ts` - Cron job endpoint
+- `src/app/api/cron/run/route.ts` - Cron job endpoint
 - `src/app/api/templates/route.ts` - Templates CRUD
 - `src/app/dashboard/history/page.tsx` - History page
 - `src/app/dashboard/schedule/page.tsx` - Schedule page
 - `src/app/dashboard/templates/page.tsx` - Templates page
 - `db/storage_setup.md` - Storage setup guide
 - `db/seed_templates.sql` - Template seeding SQL
-- `vercel.json` - Cron job configuration
+- `.github/workflows/cron.yml` - GitHub Actions cron job configuration
 - `CRON_SETUP.md` - Cron setup guide
 
 ### Modified Files

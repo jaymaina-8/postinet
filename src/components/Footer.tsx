@@ -31,10 +31,10 @@ export default function Footer() {
                 Dashboard
               </Link>
               <Link
-                href="/scheduler"
+                href="/dashboard/schedule"
                 className="text-sm transition-colors hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#111]"
               >
-                Scheduler
+                Schedule
               </Link>
               <Link
                 href="/integrations"

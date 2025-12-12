@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFacebookAuthUrl, validateFacebookEnv } from '@/lib/facebook/oauth';
+import { getFacebookAuthUrl, checkFacebookConfig, getFacebookAuthUrlWithRedirect } from '@/lib/facebook';
+
+/**
+ * Facebook OAuth Authorization URL Route
+ * 
+ * Returns the URL the user should be redirected to for Facebook OAuth.
+ * 
+ * Production URLs:
+ * - App URL: https://www.postinet.pro
+ * - API callback: https://www.postinet.pro/api/facebook/exchange
+ * - Local dev callback: http://localhost:3000/api/facebook/exchange
+ */
 
 async function resolveUser(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
@@ -29,12 +40,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Validate environment variables (will throw if missing)
-    try {
-      validateFacebookEnv();
-    } catch (envError: any) {
+    // Validate environment variables
+    const config = checkFacebookConfig();
+    if (!config.isConfigured) {
+      console.error('Facebook OAuth not configured. Missing:', config.missing.join(', '));
       return NextResponse.json(
-        { error: envError.message || 'Facebook OAuth not configured' },
+        { error: `Facebook OAuth not configured. Missing: ${config.missing.join(', ')}` },
         { status: 500 }
       );
     }
@@ -49,17 +60,18 @@ export async function GET(req: NextRequest) {
       // Try to use fallback, but warn if FACEBOOK_REDIRECT_URI is not set
       console.warn('FACEBOOK_REDIRECT_URI not set, using fallback:', fallbackRedirectUri);
       
-      const authUrl = getFacebookAuthUrl(fallbackRedirectUri);
+      const authUrl = getFacebookAuthUrlWithRedirect(fallbackRedirectUri);
       return NextResponse.json({ authUrl });
     }
 
-    const authUrl = getFacebookAuthUrl(redirectUri);
+    const authUrl = getFacebookAuthUrl();
     return NextResponse.json({ authUrl });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate Facebook OAuth URL';
     console.error('Error generating Facebook OAuth URL:', error);
     return NextResponse.json(
       {
-        error: error.message || 'Failed to generate Facebook OAuth URL',
+        error: errorMessage,
       },
       { status: 500 }
     );
