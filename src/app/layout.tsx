@@ -4,8 +4,8 @@ import Footer from "@/components/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "POSTINET AI",
-  description: "AI-powered social media content management",
+  title: "Postinet AI - Social Media Management",
+  description: "AI-powered social media content management and scheduling",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
