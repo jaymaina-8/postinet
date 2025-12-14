@@ -97,3 +97,4 @@ OPENAI_API_KEY=your_openai_api_key
 7. Manage profile → `/dashboard/profile`
 
 
+

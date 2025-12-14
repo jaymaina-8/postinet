@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react';
 import supabase from '@/lib/supabaseClient';
-import { PLATFORM_LIST, PLATFORMS } from '@/lib/platforms';
+import { PLATFORM_LIST, PLATFORMS, Platform } from '@/lib/platforms';
 
 const platforms = PLATFORM_LIST;
 
 export default function GenerateContentPage() {
   const [inputText, setInputText] = useState('');
-  const [selectedPlatform, setSelectedPlatform] = useState(PLATFORMS.FACEBOOK);
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform>(PLATFORMS.FACEBOOK);
   const [file, setFile] = useState<File | null>(null);
   const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -165,7 +165,7 @@ export default function GenerateContentPage() {
             <select
               className="w-full border border-zinc-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
               value={selectedPlatform}
-              onChange={(e) => setSelectedPlatform(e.target.value)}
+              onChange={(e) => setSelectedPlatform(e.target.value as Platform)}
             >
               {platforms.map((p) => (
                 <option value={p.value} key={p.value}>{p.label}</option>
