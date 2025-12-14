@@ -16,7 +16,8 @@ jobs:
           echo "Triggering Postinet cron job at $(date -u)"
           
           # Make the request and capture response
-          response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+          # Follow HTTP redirects (fixes 308 Permanent Redirect returned by target)
+          response=$(curl -L -s -w "\nHTTP_STATUS:%{http_code}" \
             -X GET \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ secrets.CRON_URL }}")
