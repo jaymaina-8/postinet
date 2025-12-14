@@ -29,7 +29,7 @@
 - ✅ Filter by status (All, Drafts, Scheduled, Posted)
 - ✅ Displays post content, captions, hashtags, timestamps
 - ✅ Shows media previews
-- ✅ Links to platform posts when available
+- ✅ Links to Twitter posts when available
 
 ### 4. Templates
 - ✅ Created `/api/templates` route with full CRUD operations
@@ -52,18 +52,17 @@
 **Database Migration:**
 - Run updated `db/supabase_migrations.sql` to create `scheduled_posts` table
 
-### 6. GitHub Actions Cron Job
-- ✅ Created `/api/cron/run` endpoint
-- ✅ Configured `.github/workflows/cron.yml` (runs every 5 minutes)
+### 6. Vercel Cron Job
+- ✅ Created `/api/scheduler/run` endpoint
+- ✅ Configured `vercel.json` with cron job (runs every 5 minutes)
 - ✅ Processes scheduled posts that are due
-- ✅ Facebook posting fully implemented
+- ✅ Placeholder for Twitter posting (ready for API keys)
 - ✅ Error handling and status updates
 
 **Setup Required:**
-1. Add `CRON_SECRET` to GitHub repository secrets
-2. Add `CRON_SECRET` to production environment variables
-3. Verify workflow is enabled in GitHub Actions
-4. See `CRON_SETUP.md` for detailed instructions
+1. Deploy to Vercel
+2. Verify cron job in Vercel Dashboard (Settings → Cron Jobs)
+3. Optionally set `CRON_SECRET` environment variable for security
 
 ## 📋 Next Steps
 
@@ -94,22 +93,23 @@
    CRON_SECRET=your_optional_cron_secret
    ```
 
-5. **GitHub Actions Setup**
-   - Add `CRON_SECRET` to GitHub repository secrets
-   - Enable GitHub Actions workflow
+5. **Vercel Deployment**
+   - Deploy to Vercel
+   - Verify cron job configuration
    - See: `CRON_SETUP.md`
 
-### Next Steps
+### When Twitter/X API Keys Are Available
 
-1. **Add "Post Now" Button**
-   - Wire up existing `/api/facebook/post` endpoint to History/Generate pages
-   - Add immediate posting functionality
-   - Handle success/error states
+1. **Implement Twitter Posting**
+   - Create `lib/twitterClient.ts` for Twitter API v2
+   - Update `/api/scheduler/run` to call actual Twitter API
+   - Implement media upload to Twitter
+   - Update post status with real Twitter post IDs
 
-2. **Facebook Analytics**
-   - Fetch post metrics from Facebook Graph API
-   - Display engagement data in History page
-   - Calculate engagement rates
+2. **Add "Post Now" Button**
+   - Add immediate posting functionality to History page
+   - Create `/api/post` endpoint for immediate posts
+   - Wire up to Twitter API
 
 ## 🔧 API Endpoints Created
 
@@ -123,7 +123,7 @@
 - `POST /api/templates` - Create template (requires auth)
 - `PUT /api/templates` - Update template (requires auth)
 - `DELETE /api/templates` - Delete template (requires auth)
-- `POST /api/cron/run` - Cron job endpoint (called by GitHub Actions)
+- `GET /api/scheduler/run` - Cron job endpoint (called by Vercel)
 
 ## 📁 Files Created/Modified
 
@@ -132,14 +132,14 @@
 - `src/app/api/upload/route.ts` - Upload endpoint
 - `src/app/api/posts/route.ts` - Posts endpoint
 - `src/app/api/schedule/route.ts` - Scheduling endpoint
-- `src/app/api/cron/run/route.ts` - Cron job endpoint
+- `src/app/api/scheduler/run/route.ts` - Cron job endpoint
 - `src/app/api/templates/route.ts` - Templates CRUD
 - `src/app/dashboard/history/page.tsx` - History page
 - `src/app/dashboard/schedule/page.tsx` - Schedule page
 - `src/app/dashboard/templates/page.tsx` - Templates page
 - `db/storage_setup.md` - Storage setup guide
 - `db/seed_templates.sql` - Template seeding SQL
-- `.github/workflows/cron.yml` - GitHub Actions cron job configuration
+- `vercel.json` - Cron job configuration
 - `CRON_SETUP.md` - Cron setup guide
 
 ### Modified Files
@@ -155,5 +155,5 @@ All features are implemented and ready for testing once:
 3. OpenAI API key is set
 4. Templates are seeded (optional)
 
-Facebook posting is fully implemented and working. Posts can be scheduled and automatically published to Facebook Pages.
+The Twitter posting functionality is implemented as a placeholder and will work once API keys are added.
 

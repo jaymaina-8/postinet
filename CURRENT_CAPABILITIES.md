@@ -31,7 +31,7 @@
 - ✅ See original content, AI captions, hashtags
 - ✅ View media previews
 - ✅ Display timestamps (created, scheduled, posted)
-- ✅ Link to platform posts (when posted)
+- ✅ Link to Twitter posts (when posted)
 
 **How to use:**
 - Go to `/dashboard/history`
@@ -67,15 +67,15 @@
 ---
 
 ### 4. **Post Scheduling** ✅
-**Status:** Fully functional with Facebook posting
+**Status:** Fully functional (posting is placeholder until X API keys available)
 
 **What it does:**
 - ✅ Schedule posts for future dates/times
 - ✅ View all scheduled posts
 - ✅ Cancel scheduled posts
-- ✅ Automatic processing via GitHub Actions Cron Job (every 5 minutes)
+- ✅ Automatic processing via Vercel Cron Job (every 5 minutes)
 - ✅ Status tracking (pending, posted, failed, cancelled)
-- ✅ **Facebook posting**: Fully implemented and working
+- ⚠️ **Posting to Twitter**: Currently simulated (ready for API keys)
 
 **How to use:**
 - Go to `/dashboard/schedule`
@@ -103,16 +103,21 @@
 
 ## ⚠️ PARTIALLY IMPLEMENTED
 
-### 6. **Facebook Posting** ✅
-**Status:** Fully implemented and working
+### 6. **Twitter/X Posting** ⚠️
+**Status:** Infrastructure ready, waiting for API keys
 
 **What's done:**
-- ✅ OAuth connection flow (connect Facebook account)
-- ✅ Page token storage in database
-- ✅ Real Facebook Graph API posting (text + images)
-- ✅ Scheduling system integration
-- ✅ Cron job endpoint integration
-- ✅ Page connection display in UI
+- ✅ OAuth connection flow (connect Twitter account)
+- ✅ Token storage in database
+- ✅ Scheduling system ready
+- ✅ Cron job endpoint ready
+- ⚠️ **Actual posting**: Placeholder (simulates posting until API keys added)
+
+**What's needed:**
+- Twitter/X API keys
+- Implement `lib/twitterClient.ts` with actual Twitter API v2 calls
+- Update `/api/scheduler/run` to call real Twitter API
+- Add "Post Now" button to History page
 
 ---
 
@@ -136,7 +141,7 @@
 
 **Missing:**
 - Engagement rate calculation
-- Likes, comments, shares from Facebook API
+- Likes, reposts, views from Twitter API
 - Best performing hashtags analysis
 - Analytics cards on History page
 
@@ -149,7 +154,8 @@
 
 **Missing:**
 - Immediate posting button on History/Generate pages
-- `/api/post` endpoint for immediate posts (Facebook posting API exists but not wired to UI)
+- `/api/post` endpoint for immediate posts
+- Integration with Twitter API
 
 ---
 
@@ -159,13 +165,13 @@
 |---------|-----------|----------------|------------|
 | Authentication | ✅ | ✅ | 100% |
 | Onboarding | ✅ | ✅ | 100% |
-| Facebook OAuth | ✅ | ✅ | 100% |
+| Twitter OAuth | ✅ | ✅ | 100% |
 | AI Content Generation | ❌ | ✅ | 100% |
 | Media Upload | ❌ | ✅ | 95% (needs bucket setup) |
 | Content History | ❌ | ✅ | 90% (missing analytics) |
 | Templates | ❌ | ✅ | 100% |
 | Scheduling | ❌ | ✅ | 85% (posting is placeholder) |
-| Post to Facebook | ❌ | ✅ | 100% |
+| Post to Twitter | ❌ | ⚠️ | 30% (infrastructure ready) |
 | Magic AI Buttons | ❌ | ❌ | 0% |
 | Analytics | ❌ | ❌ | 0% |
 
@@ -202,14 +208,15 @@
 
 ---
 
-## 🚀 What's Blocked
+## 🚀 What's Blocked (Waiting for Twitter/X API Keys)
 
-1. **"Post Now" Button**
-   - Immediate posting functionality not wired to UI
-   - Facebook posting API exists but needs UI integration
+1. **Actual Twitter Posting**
+   - Posts are simulated in the scheduler
+   - Real Twitter post IDs are not generated
+   - Cannot post immediately ("Post Now" button not implemented)
 
-2. **Facebook Analytics**
-   - Cannot fetch likes, comments, shares
+2. **Twitter Analytics**
+   - Cannot fetch likes, reposts, views
    - Engagement rate cannot be calculated
    - Best hashtags analysis unavailable
 
@@ -223,13 +230,14 @@ To get everything working:
 - [ ] Run `db/seed_templates.sql` to add starter templates
 - [ ] Create `content` bucket in Supabase Storage (see `db/storage_setup.md`)
 - [ ] Set `OPENAI_API_KEY` in environment variables
-- [ ] Deploy to Vercel and configure GitHub Actions cron job (see `CRON_SETUP.md`)
+- [ ] Deploy to Vercel and configure cron job (see `CRON_SETUP.md`)
 - [ ] (Optional) Set `CRON_SECRET` for cron job security
 
-Next steps:
-- [ ] Add "Post Now" button to History page (wire up existing Facebook POST API)
-- [ ] Implement analytics fetching from Facebook Graph API
-- [ ] Add support for multiple Facebook Pages selection
+Once Twitter/X API keys are available:
+- [ ] Implement `lib/twitterClient.ts`
+- [ ] Update `/api/scheduler/run` with real Twitter API calls
+- [ ] Add "Post Now" button to History page
+- [ ] Implement analytics fetching from Twitter API
 
 ---
 
@@ -241,7 +249,7 @@ Next steps:
 - ✅ Use templates for quick content creation
 - ✅ Schedule posts for automatic posting (once API keys are added)
 
-**Facebook posting is fully functional!** The platform can now post to Facebook Pages automatically via scheduled posts.
+**The only missing piece is the actual Twitter posting**, which is blocked by API key access. Everything else is production-ready!
 
 
 
