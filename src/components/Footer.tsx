@@ -25,34 +25,22 @@ export default function Footer() {
             </h4>
             <nav className="flex flex-col space-y-2" aria-label="Product navigation">
               <Link
+                href="/auth/login"
+                className="text-sm transition-colors hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#111]"
+              >
+                Login
+              </Link>
+              <Link
+                href="/auth/signup"
+                className="text-sm transition-colors hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#111]"
+              >
+                Sign Up
+              </Link>
+              <Link
                 href="/dashboard"
                 className="text-sm transition-colors hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#111]"
               >
                 Dashboard
-              </Link>
-              <Link
-                href="/scheduler"
-                className="text-sm transition-colors hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#111]"
-              >
-                Scheduler
-              </Link>
-              <Link
-                href="/integrations"
-                className="text-sm transition-colors hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#111]"
-              >
-                Integrations
-              </Link>
-              <Link
-                href="/pricing"
-                className="text-sm transition-colors hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#111]"
-              >
-                Pricing
-              </Link>
-              <Link
-                href="/support"
-                className="text-sm transition-colors hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#111]"
-              >
-                Support
               </Link>
             </nav>
           </div>
