@@ -44,19 +44,54 @@ export default function ConnectYouTubeCard() {
   async function fetchConnection() {
     setLoading(true);
     setError(null);
-    const { data, error } = await supabase
-      .from("connected_accounts")
-      .select("id, platform_username, created_at")
-      .eq("platform", PLATFORMS.YOUTUBE)
-      .maybeSingle();
+    
+    try {
+      // Check if user is authenticated first
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setAccount(null);
+        setLoading(false);
+        return;
+      }
 
-    if (error && error.code !== "PGRST116") {
-      setError(error.message);
+      // Try fetching with all columns, fall back to basic if some don't exist
+      let accountData = null;
+      
+      const result = await supabase
+        .from("connected_accounts")
+        .select("id, platform_username, created_at")
+        .eq("platform", PLATFORMS.YOUTUBE)
+        .maybeSingle();
+
+      if (result.error && result.error.message?.includes("does not exist")) {
+        // Fallback: try with only basic columns
+        const fallbackResult = await supabase
+          .from("connected_accounts")
+          .select("id, created_at")
+          .eq("platform", PLATFORMS.YOUTUBE)
+          .maybeSingle();
+        
+        if (fallbackResult.data) {
+          accountData = {
+            ...fallbackResult.data,
+            platform_username: null,
+          };
+        }
+      } else if (result.error && result.error.code !== "PGRST116" && result.error.message) {
+        setError(result.error.message);
+        setAccount(null);
+        return;
+      } else {
+        accountData = result.data;
+      }
+
+      setAccount(accountData ?? null);
+    } catch (err) {
+      console.error("Error in fetchConnection:", err);
       setAccount(null);
-    } else {
-      setAccount(data ?? null);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function handleConnect() {

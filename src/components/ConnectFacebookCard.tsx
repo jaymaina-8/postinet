@@ -10,11 +10,9 @@ import { PLATFORMS } from "@/lib/platforms";
 type ConnectedAccount = {
   id: string;
   platform_username: string | null;
-  facebook_page_id: string | null;
   facebook_page_name: string | null;
-  facebook_page_access_token: string | null;
-  expires_at: number | null;
   created_at: string;
+  expires_at: number | null;
 };
 
 export default function ConnectFacebookCard() {
@@ -23,25 +21,20 @@ export default function ConnectFacebookCard() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     fetchConnection();
     
     // Check for OAuth callback results
-    // Support both 'facebook_connected' (legacy) and 'facebook=connected' (new)
     const facebookConnected = searchParams.get('facebook_connected');
-    const facebookParam = searchParams.get('facebook');
     const facebookError = searchParams.get('facebook_error');
     
-    if (facebookConnected === 'true' || facebookParam === 'connected') {
-      // Refresh connection status after successful OAuth
+    if (facebookConnected === 'true') {
+      setSuccess('Facebook Page connected successfully!');
       fetchConnection();
-      setSuccessMessage('Facebook connected successfully!');
       // Clear the URL parameter
       window.history.replaceState({}, '', window.location.pathname);
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccessMessage(null), 5000);
     }
     
     if (facebookError) {
@@ -54,28 +47,69 @@ export default function ConnectFacebookCard() {
   async function fetchConnection() {
     setLoading(true);
     setError(null);
-    const { data, error } = await supabase
-      .from("connected_accounts")
-      .select("id, platform_username, facebook_page_id, facebook_page_name, facebook_page_access_token, expires_at, created_at")
-      .eq("platform", PLATFORMS.FACEBOOK)
-      .maybeSingle();
+    
+    try {
+      // Check if user is authenticated first
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setAccount(null);
+        setLoading(false);
+        return;
+      }
 
-    if (error && error.code !== "PGRST116") {
-      setError(error.message);
+      // Try fetching with all columns, fall back to basic if some don't exist
+      let accountData = null;
+      
+      const result = await supabase
+        .from("connected_accounts")
+        .select("id, platform_username, facebook_page_name, created_at, expires_at")
+        .eq("platform", PLATFORMS.FACEBOOK)
+        .maybeSingle();
+
+      if (result.error && result.error.message?.includes("does not exist")) {
+        // Fallback: try with only basic columns
+        const fallbackResult = await supabase
+          .from("connected_accounts")
+          .select("id, created_at")
+          .eq("platform", PLATFORMS.FACEBOOK)
+          .maybeSingle();
+        
+        if (fallbackResult.data) {
+          accountData = {
+            ...fallbackResult.data,
+            platform_username: null,
+            facebook_page_name: null,
+            expires_at: null,
+          };
+        }
+      } else if (result.error && result.error.code !== "PGRST116" && result.error.message) {
+        setError(result.error.message);
+        setAccount(null);
+        return;
+      } else {
+        accountData = result.data;
+      }
+
+      setAccount(accountData ?? null);
+    } catch (err) {
+      console.error("Error in fetchConnection:", err);
       setAccount(null);
-    } else {
-      setAccount(data ?? null);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  }
+
+  function isTokenExpired(): boolean {
+    if (!account?.expires_at) return false;
+    return Date.now() > account.expires_at;
   }
 
   async function handleConnect() {
     try {
       setActionLoading(true);
       setError(null);
-      setSuccessMessage(null);
+      setSuccess(null);
       
-      // Get the session to verify user is logged in
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -85,7 +119,6 @@ export default function ConnectFacebookCard() {
         return;
       }
 
-      // Call API to get Facebook OAuth URL
       const response = await fetch("/api/facebook/auth-url", {
         method: "GET",
         headers: {
@@ -98,14 +131,14 @@ export default function ConnectFacebookCard() {
         throw new Error(body.error || "Failed to get Facebook OAuth URL.");
       }
 
-      const { authUrl } = await response.json();
+      const { url } = await response.json();
       
       // Redirect to Facebook OAuth
-      window.location.href = authUrl;
+      window.location.href = url;
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Unable to start Facebook OAuth.";
       console.error(err);
-      setError(errorMessage);
+      const message = err instanceof Error ? err.message : "Unable to start Facebook OAuth.";
+      setError(message);
       setActionLoading(false);
     }
   }
@@ -114,92 +147,130 @@ export default function ConnectFacebookCard() {
     try {
       setActionLoading(true);
       setError(null);
-      setSuccessMessage(null);
+      setSuccess(null);
+      
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      
       if (!session?.access_token) {
         setError("You need to be signed in to disconnect.");
         return;
       }
+      
       const response = await fetch("/api/facebook/connection", {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
+      
       if (!response.ok) {
         const body = await response.json();
         throw new Error(body.error || "Failed to disconnect account.");
       }
+      
       setAccount(null);
-      setSuccessMessage('Facebook disconnected successfully.');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      setSuccess("Facebook disconnected successfully.");
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to disconnect account.";
       console.error(err);
-      setError(errorMessage);
+      const message = err instanceof Error ? err.message : "Failed to disconnect account.";
+      setError(message);
     } finally {
       setActionLoading(false);
     }
   }
 
+  const tokenExpired = isTokenExpired();
+
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>Connect Facebook</CardTitle>
-        <CardDescription>Authorize Postinet to publish on your behalf.</CardDescription>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+            </svg>
+          </div>
+          <div>
+            <CardTitle>Facebook</CardTitle>
+            <CardDescription>Connect your Facebook Page</CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
           <p className="text-sm text-zinc-500">Checking connection...</p>
         ) : account ? (
           <div className="space-y-3">
-            <p className="text-sm text-zinc-600">
-              Connected{account.platform_username ? ` as ${account.platform_username}` : ""}.
+            <div className="flex items-center gap-2">
+              {tokenExpired ? (
+                <span className="w-2 h-2 rounded-full bg-red-500" />
+              ) : (
+                <span className="w-2 h-2 rounded-full bg-green-500" />
+              )}
+              <span className="text-sm text-zinc-600">
+                {tokenExpired ? "Token Expired" : "Connected"}
+              </span>
+            </div>
+            
+            {account.facebook_page_name && (
+              <p className="text-sm font-medium text-zinc-800">
+                Page: {account.facebook_page_name}
+              </p>
+            )}
+            
+            {account.platform_username && !account.facebook_page_name && (
+              <p className="text-sm text-zinc-600">
+                Account: {account.platform_username}
+              </p>
+            )}
+            
+            <p className="text-xs text-zinc-400">
+              Connected on {new Date(account.created_at).toLocaleDateString()}
             </p>
             
-            {account.facebook_page_id && account.facebook_page_name ? (
-              <div className="p-3 bg-green-50 border border-green-200 rounded">
-                <p className="text-sm font-medium text-green-900 mb-1">Facebook Page Connected</p>
-                <p className="text-xs text-green-700">Page: {account.facebook_page_name}</p>
-                <p className="text-xs text-green-600">ID: {account.facebook_page_id}</p>
-                <p className="text-xs text-green-600 mt-1">Posting enabled for Facebook Pages only.</p>
-              </div>
-            ) : (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
-                <p className="text-sm font-medium text-yellow-900 mb-1">No Facebook Page Connected</p>
-                <p className="text-xs text-yellow-700">
-                  Please reconnect your Facebook account to grant Page access. Posting requires a connected Page.
+            {tokenExpired && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-700">
+                  Your Facebook token has expired. Please reconnect to continue posting.
                 </p>
               </div>
             )}
             
-            {account.expires_at && account.expires_at < Date.now() && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded">
-                <p className="text-sm font-medium text-red-900">Token Expired</p>
-                <p className="text-xs text-red-700">Please reconnect your Facebook account.</p>
-              </div>
-            )}
-            
-            <Button variant="outline" onClick={handleDisconnect} disabled={actionLoading}>
-              {actionLoading ? "Disconnecting..." : "Disconnect"}
-            </Button>
+            <div className="flex gap-2">
+              {tokenExpired && (
+                <Button onClick={handleConnect} disabled={actionLoading}>
+                  {actionLoading ? "Connecting..." : "Reconnect"}
+                </Button>
+              )}
+              <Button variant="outline" onClick={handleDisconnect} disabled={actionLoading}>
+                {actionLoading ? "Disconnecting..." : "Disconnect"}
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-zinc-600">
-              Link your Facebook account to unlock AI drafting and one-click posting.
+              Connect your Facebook Page to start publishing content with AI-generated captions.
             </p>
             <Button onClick={handleConnect} disabled={actionLoading}>
               {actionLoading ? "Redirecting..." : "Connect Facebook"}
             </Button>
           </div>
         )}
-        {successMessage && (
-          <p className="text-sm text-green-600">{successMessage}</p>
+        
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
         )}
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        
+        {success && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <p className="text-sm text-green-700">{success}</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

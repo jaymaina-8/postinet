@@ -9,10 +9,12 @@ import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 
 const sidebarLinks = [
-  { href: "/dashboard", label: "Create" },
+  { href: "/dashboard", label: "Home" },
+  { href: "/dashboard/accounts", label: "Accounts" },
+  { href: "/dashboard/generate", label: "Create" },
   { href: "/dashboard/schedule", label: "Schedule" },
   { href: "/dashboard/history", label: "History" },
-  { href: "/dashboard/templates", label: "Templates" },
+  { href: "/dashboard/profile", label: "Profile" },
 ];
 
 function Sidebar() {

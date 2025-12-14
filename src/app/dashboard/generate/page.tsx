@@ -2,17 +2,13 @@
 
 import React, { useState } from 'react';
 import supabase from '@/lib/supabaseClient';
+import { PLATFORM_LIST, PLATFORMS } from '@/lib/platforms';
 
-const platforms = [
-  { label: 'Twitter/X', value: 'twitter' },
-  { label: 'Instagram', value: 'instagram' },
-  { label: 'TikTok', value: 'tiktok' },
-  { label: 'YouTube', value: 'youtube' },
-];
+const platforms = PLATFORM_LIST;
 
 export default function GenerateContentPage() {
   const [inputText, setInputText] = useState('');
-  const [selectedPlatform, setSelectedPlatform] = useState(platforms[0].value);
+  const [selectedPlatform, setSelectedPlatform] = useState(PLATFORMS.FACEBOOK);
   const [file, setFile] = useState<File | null>(null);
   const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
