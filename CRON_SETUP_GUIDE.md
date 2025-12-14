@@ -180,3 +180,4 @@ If you're deploying to Vercel, you can use Vercel Cron Jobs instead:
 
 Running every 5 minutes = 288 runs per day = ~8,640 runs per month
 
+

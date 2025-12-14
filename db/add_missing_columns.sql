@@ -19,3 +19,4 @@ FROM information_schema.columns
 WHERE table_name = 'connected_accounts'
 ORDER BY ordinal_position;
 
+

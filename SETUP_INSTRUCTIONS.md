@@ -96,3 +96,4 @@ OPENAI_API_KEY=your_openai_api_key
 6. View history → `/dashboard/history`
 7. Manage profile → `/dashboard/profile`
 
+
