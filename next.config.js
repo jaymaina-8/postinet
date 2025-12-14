@@ -1,9 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   images: {
-    domains: ['ewzslshgbjhecfruvsna.supabase.co'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'ewzslshgbjhecfruvsna.supabase.co',
+        pathname: '/**',
+      },
+    ],
   },
   // Ensure proper routing
   trailingSlash: false,
@@ -11,11 +16,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
 }
 
 module.exports = nextConfig
-
-
