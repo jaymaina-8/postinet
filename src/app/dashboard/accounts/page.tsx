@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS, PLATFORM_LABELS, Platform } from "@/lib/platforms";
@@ -14,7 +14,16 @@ interface ConnectedAccount {
   expires_at: number | null;
 }
 
+// Wrapper component to handle Suspense for useSearchParams
 export default function AccountsPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-12 text-zinc-500">Loading accounts...</div>}>
+      <AccountsPageContent />
+    </Suspense>
+  );
+}
+
+function AccountsPageContent() {
   const searchParams = useSearchParams();
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,36 +32,44 @@ export default function AccountsPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAccounts();
-    
-    // Check for OAuth callback results
+    // Check for OAuth callback results immediately
     const facebookConnected = searchParams.get('facebook_connected');
     const youtubeConnected = searchParams.get('youtube_connected');
     const facebookError = searchParams.get('facebook_error');
     const youtubeError = searchParams.get('youtube_error');
     
+    // Set messages based on URL params
     if (facebookConnected === 'true') {
-      setSuccess('Facebook Page connected successfully!');
-      fetchAccounts();
-      window.history.replaceState({}, '', window.location.pathname);
+      setSuccess('🎉 Facebook Page connected successfully!');
+    } else if (youtubeConnected === 'true') {
+      setSuccess('🎉 YouTube channel connected successfully!');
+    } else if (facebookError) {
+      setError(`Facebook connection failed: ${decodeURIComponent(facebookError)}`);
+    } else if (youtubeError) {
+      setError(`YouTube connection failed: ${decodeURIComponent(youtubeError)}`);
     }
     
-    if (youtubeConnected === 'true') {
-      setSuccess('YouTube channel connected successfully!');
-      fetchAccounts();
-      window.history.replaceState({}, '', window.location.pathname);
+    // Clean up URL params (remove from URL bar)
+    if (facebookConnected || youtubeConnected || facebookError || youtubeError) {
+      // Use setTimeout to ensure state is set before URL change
+      setTimeout(() => {
+        window.history.replaceState({}, '', window.location.pathname);
+      }, 100);
     }
     
-    if (facebookError) {
-      setError(decodeURIComponent(facebookError));
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-    
-    if (youtubeError) {
-      setError(decodeURIComponent(youtubeError));
-      window.history.replaceState({}, '', window.location.pathname);
-    }
+    // Fetch accounts data
+    fetchAccounts();
   }, [searchParams]);
+  
+  // Auto-dismiss success message after 5 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   async function fetchAccounts() {
     setLoading(true);
@@ -250,14 +267,30 @@ export default function AccountsPage() {
 
       {/* Success/Error Messages */}
       {success && (
-        <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-green-700">{success}</p>
+        <div className="mb-6 bg-green-100 border-2 border-green-400 rounded-lg p-4 shadow-md animate-pulse">
+          <div className="flex items-center justify-between">
+            <p className="text-green-800 font-medium text-lg">{success}</p>
+            <button 
+              onClick={() => setSuccess(null)}
+              className="text-green-600 hover:text-green-800 ml-4"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
       
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">{error}</p>
+        <div className="mb-6 bg-red-100 border-2 border-red-400 rounded-lg p-4 shadow-md">
+          <div className="flex items-center justify-between">
+            <p className="text-red-800 font-medium">{error}</p>
+            <button 
+              onClick={() => setError(null)}
+              className="text-red-600 hover:text-red-800 ml-4"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 

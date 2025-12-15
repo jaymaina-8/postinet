@@ -16,6 +16,19 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // Increase body size limit for file uploads (10GB for large videos)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10gb',
+    },
+  },
+  // Suppress dynamic API sync access warnings in dev mode (Next.js 16 specific)
+  // These warnings occur when browser devtools inspect params/searchParams
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
 }
 
 module.exports = nextConfig

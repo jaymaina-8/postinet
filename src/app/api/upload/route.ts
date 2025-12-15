@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 
+// Next.js App Router configuration for larger file uploads
+// This increases the body size limit from the default 1MB to 10GB
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+export const maxDuration = 36000; // 10 hours (36000 seconds) for large upload processing
+
 async function resolveUser(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) {
@@ -30,11 +36,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // Validate file size (max 10GB)
+    const maxSize = 10 * 1024 * 1024 * 1024; // 10GB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File size exceeds 10MB limit' },
+        { error: 'File size exceeds 10GB limit' },
         { status: 400 }
       );
     }

@@ -66,13 +66,13 @@ export async function GET(req: NextRequest) {
     // Handle OAuth errors from Facebook
     if (error) {
       console.error('Facebook OAuth error:', { error, errorDescription });
-      const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
       dashboardUrl.searchParams.set('facebook_error', errorDescription || error);
       return NextResponse.redirect(dashboardUrl);
     }
 
     if (!code) {
-      const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
       dashboardUrl.searchParams.set('facebook_error', 'Missing authorization code');
       return NextResponse.redirect(dashboardUrl);
     }
@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
       validateFacebookEnv();
     } catch (envError: unknown) {
       console.error('Facebook OAuth environment validation failed:', envError);
-      const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
       dashboardUrl.searchParams.set('facebook_error', 'Server configuration error');
       return NextResponse.redirect(dashboardUrl);
     }
@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
       tokenResponse = await exchangeFacebookCode(code, redirectUri);
     } catch (tokenError: unknown) {
       console.error('Token exchange error:', tokenError);
-      const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
       const message = tokenError instanceof Error ? tokenError.message : 'Unknown error';
       dashboardUrl.searchParams.set('facebook_error', `Failed to exchange authorization code: ${message}`);
       return NextResponse.redirect(dashboardUrl);
@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
     const user = await resolveUser(req);
     
     if (!user) {
-      const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
       dashboardUrl.searchParams.set('facebook_error', 'User authentication required. Please ensure you are logged in.');
       return NextResponse.redirect(dashboardUrl);
     }
@@ -206,7 +206,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(dashboardUrl);
   } catch (error: unknown) {
     console.error('Facebook OAuth exchange error:', error);
-    const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+    const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
     const message = error instanceof Error ? error.message : 'Failed to complete Facebook OAuth';
     dashboardUrl.searchParams.set('facebook_error', message);
     return NextResponse.redirect(dashboardUrl);

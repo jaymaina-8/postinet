@@ -60,13 +60,13 @@ export async function GET(req: NextRequest) {
     // Handle OAuth errors from Google
     if (error) {
       console.error('YouTube OAuth error:', { error, errorDescription });
-      const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
       dashboardUrl.searchParams.set('youtube_error', errorDescription || error);
       return NextResponse.redirect(dashboardUrl);
     }
 
     if (!code) {
-      const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
       dashboardUrl.searchParams.set('youtube_error', 'Missing authorization code');
       return NextResponse.redirect(dashboardUrl);
     }
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
       validateYouTubeEnv();
     } catch (envError: any) {
       console.error('YouTube OAuth environment validation failed:', envError);
-      const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
       dashboardUrl.searchParams.set('youtube_error', 'Server configuration error');
       return NextResponse.redirect(dashboardUrl);
     }
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
       tokenResponse = await exchangeYouTubeCode(code, redirectUri);
     } catch (tokenError: any) {
       console.error('Token exchange error:', tokenError);
-      const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
       dashboardUrl.searchParams.set('youtube_error', `Failed to exchange authorization code: ${tokenError.message}`);
       return NextResponse.redirect(dashboardUrl);
     }
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
     const user = await resolveUser(req);
     
     if (!user) {
-      const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
       dashboardUrl.searchParams.set('youtube_error', 'User authentication required. Please ensure you are logged in.');
       return NextResponse.redirect(dashboardUrl);
     }
@@ -171,13 +171,13 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Redirect to dashboard with success parameter
-    const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+    // Redirect to accounts page with success parameter
+    const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
     dashboardUrl.searchParams.set('youtube_connected', 'true');
     return NextResponse.redirect(dashboardUrl);
   } catch (error: any) {
     console.error('YouTube OAuth exchange error:', error);
-    const dashboardUrl = new URL('/dashboard', req.nextUrl.origin);
+    const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
     dashboardUrl.searchParams.set('youtube_error', error.message || 'Failed to complete YouTube OAuth');
     return NextResponse.redirect(dashboardUrl);
   }
