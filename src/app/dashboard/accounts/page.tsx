@@ -165,11 +165,31 @@ function AccountsPageContent() {
       });
 
       if (!response.ok) {
-        const body = await response.json();
-        throw new Error(body.error || `Failed to get ${platform} OAuth URL.`);
+        // Try to parse as JSON, but handle non-JSON responses gracefully
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const body = await response.json();
+          throw new Error(body.error || `Failed to get ${platform} OAuth URL.`);
+        } else {
+          // Non-JSON response (likely an error page)
+          const text = await response.text();
+          console.error('Non-JSON error response:', text.substring(0, 200));
+          throw new Error(`Server error (${response.status}): ${response.statusText || 'Failed to connect'}`);
+        }
       }
 
+      // Parse the successful response
+      const successContentType = response.headers.get('content-type');
+      if (!successContentType || !successContentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Unexpected non-JSON success response:', text.substring(0, 200));
+        throw new Error('Received invalid response from server. Please try again.');
+      }
+      
       const { url } = await response.json();
+      if (!url) {
+        throw new Error('No OAuth URL received from server.');
+      }
       window.location.href = url;
     } catch (err: unknown) {
       console.error(err);

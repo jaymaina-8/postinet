@@ -1,4 +1,15 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "functions": {
+    "src/app/api/upload/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/facebook/exchange/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/youtube/exchange/route.ts": {
+      "maxDuration": 60
+    }
+  }
 }
 
