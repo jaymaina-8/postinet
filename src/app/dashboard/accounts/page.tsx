@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS, PLATFORM_LABELS, Platform } from "@/lib/platforms";
@@ -33,50 +33,8 @@ function AccountsPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Check for OAuth callback and force server refresh
-  useEffect(() => {
-    const facebookConnected = searchParams.get("facebook") === "connected";
-    const youtubeConnected = searchParams.get('youtube_connected');
-    const facebookError = searchParams.get('facebook_error');
-    const youtubeError = searchParams.get('youtube_error');
-    
-    // Force server refresh if Facebook OAuth completed
-    if (facebookConnected) {
-      router.refresh();
-      setSuccess('🎉 Facebook Page connected successfully!');
-    } else if (youtubeConnected === 'true') {
-      setSuccess('🎉 YouTube channel connected successfully!');
-    } else if (facebookError) {
-      setError(`Facebook connection failed: ${decodeURIComponent(facebookError)}`);
-    } else if (youtubeError) {
-      setError(`YouTube connection failed: ${decodeURIComponent(youtubeError)}`);
-    }
-    
-    // Clean up URL params (remove from URL bar)
-    if (facebookConnected || youtubeConnected || facebookError || youtubeError) {
-      // Use setTimeout to ensure state is set before URL change
-      setTimeout(() => {
-        window.history.replaceState({}, '', window.location.pathname);
-      }, 100);
-    }
-  }, [searchParams, router]);
-
-  useEffect(() => {
-    // Fetch accounts data
-    fetchAccounts();
-  }, []);
-  
-  // Auto-dismiss success message after 5 seconds
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => {
-        setSuccess(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
-
   async function fetchAccounts() {
+    console.log('fetchAccounts called');
     setLoading(true);
     try {
       // First check if user is authenticated
@@ -137,6 +95,7 @@ function AccountsPageContent() {
         console.error("Error fetching accounts:", accountsError.message);
         setError(accountsError.message || "Failed to fetch connected accounts");
       } else {
+        console.log('Accounts fetched:', accountsData);
         setAccounts(accountsData || []);
       }
     } catch (err) {
@@ -146,6 +105,62 @@ function AccountsPageContent() {
       setLoading(false);
     }
   }
+
+  // Check for OAuth callback and force server refresh
+  useEffect(() => {
+    const facebookConnected = searchParams.get("facebook") === "connected";
+    const youtubeConnected = searchParams.get('youtube_connected');
+    const facebookError = searchParams.get('facebook_error');
+    const youtubeError = searchParams.get('youtube_error');
+    
+    // Force server refresh if Facebook OAuth completed
+    if (facebookConnected) {
+      console.log('Facebook OAuth callback detected, refreshing data...');
+      router.refresh();
+      setSuccess('🎉 Facebook Page connected successfully!');
+      // Refetch immediately, then retry after a delay to ensure data is loaded
+      fetchAccounts();
+      // Add a small delay and retry to ensure database write has completed
+      const retryTimeout = setTimeout(() => {
+        console.log('Retrying fetchAccounts after OAuth callback...');
+        fetchAccounts();
+        // Clean up URL params after fetching
+        window.history.replaceState({}, '', window.location.pathname);
+      }, 1500);
+      return () => clearTimeout(retryTimeout);
+    } else if (youtubeConnected === 'true') {
+      setSuccess('🎉 YouTube channel connected successfully!');
+      setTimeout(() => {
+        fetchAccounts();
+        window.history.replaceState({}, '', window.location.pathname);
+      }, 1000);
+    } else if (facebookError) {
+      setError(`Facebook connection failed: ${decodeURIComponent(facebookError)}`);
+      setTimeout(() => {
+        window.history.replaceState({}, '', window.location.pathname);
+      }, 100);
+    } else if (youtubeError) {
+      setError(`YouTube connection failed: ${decodeURIComponent(youtubeError)}`);
+      setTimeout(() => {
+        window.history.replaceState({}, '', window.location.pathname);
+      }, 100);
+    }
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    // Fetch accounts data on initial load
+    fetchAccounts();
+  }, []);
+  
+  // Auto-dismiss success message after 5 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   function isTokenExpired(expiresAt: number | null): boolean {
     if (!expiresAt) return false;
