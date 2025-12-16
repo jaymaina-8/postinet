@@ -17,6 +17,7 @@ async function resolveUser(req: NextRequest) {
     if (token) {
       const { data, error } = await supabaseAdmin.auth.getUser(token);
       if (!error && data?.user) {
+        console.log('User resolved from Authorization header');
         return data.user;
       }
     }
@@ -25,29 +26,68 @@ async function resolveUser(req: NextRequest) {
   // Try to get user from cookies (for OAuth callback flow)
   const cookies = req.cookies;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!supabaseUrl) return null;
+  if (!supabaseUrl) {
+    console.error('NEXT_PUBLIC_SUPABASE_URL not set');
+    return null;
+  }
 
   // Extract project ref from Supabase URL
   const projectRef = supabaseUrl.split('//')[1]?.split('.')[0];
-  if (!projectRef) return null;
+  if (!projectRef) {
+    console.error('Could not extract project ref from Supabase URL');
+    return null;
+  }
 
-  // Check for Supabase auth cookie
-  const authCookie = cookies.get(`sb-${projectRef}-auth-token`);
-  if (authCookie) {
-    try {
-      const session = JSON.parse(authCookie.value);
-      const token = session?.access_token;
-      if (token) {
-        const { data, error } = await supabaseAdmin.auth.getUser(token);
-        if (!error && data?.user) {
-          return data.user;
+  // Log all available cookies for debugging
+  const allCookies = cookies.getAll();
+  console.log('Available cookies:', allCookies.map(c => c.name));
+
+  // Check for Supabase auth cookie - try multiple formats
+  const cookieNames = [
+    `sb-${projectRef}-auth-token`,
+    `sb-${projectRef}-auth-token-code-verifier`,
+  ];
+
+  for (const cookieName of cookieNames) {
+    const authCookie = cookies.get(cookieName);
+    if (authCookie) {
+      console.log(`Found cookie: ${cookieName}`);
+      try {
+        // The cookie value might be base64 encoded or JSON
+        let cookieValue = authCookie.value;
+        
+        // Try to parse as JSON first
+        let session;
+        try {
+          session = JSON.parse(cookieValue);
+        } catch {
+          // Try base64 decode
+          try {
+            const decoded = Buffer.from(cookieValue, 'base64').toString('utf-8');
+            session = JSON.parse(decoded);
+          } catch {
+            console.log(`Cookie ${cookieName} is not valid JSON or base64`);
+            continue;
+          }
         }
+        
+        const token = session?.access_token;
+        if (token) {
+          const { data, error } = await supabaseAdmin.auth.getUser(token);
+          if (!error && data?.user) {
+            console.log('User resolved from cookie:', cookieName);
+            return data.user;
+          } else {
+            console.log('Token from cookie invalid:', error?.message);
+          }
+        }
+      } catch (e) {
+        console.error(`Error parsing cookie ${cookieName}:`, e);
       }
-    } catch {
-      // Cookie parsing failed
     }
   }
 
+  console.log('Could not resolve user from any source');
   return null;
 }
 
