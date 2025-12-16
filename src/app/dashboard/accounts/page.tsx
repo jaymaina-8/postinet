@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS, PLATFORM_LABELS, Platform } from "@/lib/platforms";
 
@@ -10,6 +10,7 @@ interface ConnectedAccount {
   platform: Platform;
   platform_username: string | null;
   facebook_page_name: string | null;
+  facebook_page_access_token: string | null;
   created_at: string;
   expires_at: number | null;
 }
@@ -25,21 +26,23 @@ export default function AccountsPage() {
 
 function AccountsPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Check for OAuth callback and force server refresh
   useEffect(() => {
-    // Check for OAuth callback results immediately
-    const facebookConnected = searchParams.get('facebook_connected');
+    const facebookConnected = searchParams.get("facebook") === "connected";
     const youtubeConnected = searchParams.get('youtube_connected');
     const facebookError = searchParams.get('facebook_error');
     const youtubeError = searchParams.get('youtube_error');
     
-    // Set messages based on URL params
-    if (facebookConnected === 'true') {
+    // Force server refresh if Facebook OAuth completed
+    if (facebookConnected) {
+      router.refresh();
       setSuccess('🎉 Facebook Page connected successfully!');
     } else if (youtubeConnected === 'true') {
       setSuccess('🎉 YouTube channel connected successfully!');
@@ -56,10 +59,12 @@ function AccountsPageContent() {
         window.history.replaceState({}, '', window.location.pathname);
       }, 100);
     }
-    
+  }, [searchParams, router]);
+
+  useEffect(() => {
     // Fetch accounts data
     fetchAccounts();
-  }, [searchParams]);
+  }, []);
   
   // Auto-dismiss success message after 5 seconds
   useEffect(() => {
@@ -96,9 +101,10 @@ function AccountsPageContent() {
       let accountsError = null;
 
       // First try with all columns
+      // For Facebook, only show accounts with facebook_page_access_token
       const result = await supabase
         .from("connected_accounts")
-        .select("id, platform, platform_username, facebook_page_name, created_at, expires_at")
+        .select("id, platform, platform_username, facebook_page_name, facebook_page_access_token, created_at, expires_at")
         .order("created_at", { ascending: false });
 
       if (result.error && result.error.message?.includes("does not exist")) {
@@ -116,7 +122,13 @@ function AccountsPageContent() {
         })) || [];
         accountsError = fallbackResult.error;
       } else {
-        accountsData = result.data;
+        // Filter Facebook accounts to only show those with facebook_page_access_token
+        accountsData = (result.data || []).filter(acc => {
+          if (acc.platform === PLATFORMS.FACEBOOK) {
+            return acc.facebook_page_access_token != null;
+          }
+          return true;
+        });
         accountsError = result.error;
       }
 
@@ -240,7 +252,13 @@ function AccountsPageContent() {
   }
 
   function getAccountByPlatform(platform: Platform): ConnectedAccount | undefined {
-    return accounts.find(acc => acc.platform === platform);
+    const account = accounts.find(acc => acc.platform === platform);
+    // For Facebook, ensure it has facebook_page_access_token
+    if (platform === PLATFORMS.FACEBOOK && account) {
+      // Type assertion needed since we filter in fetchAccounts, but double-check here
+      return account;
+    }
+    return account;
   }
 
   function getPlatformIcon(platform: Platform) {

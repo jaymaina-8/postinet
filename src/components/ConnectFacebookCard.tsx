@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import supabase from "@/lib/supabaseClient";
@@ -11,27 +11,30 @@ type ConnectedAccount = {
   id: string;
   platform_username: string | null;
   facebook_page_name: string | null;
+  facebook_page_access_token: string | null;
   created_at: string;
   expires_at: number | null;
 };
 
 export default function ConnectFacebookCard() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [account, setAccount] = useState<ConnectedAccount | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Check for OAuth callback and force server refresh
   useEffect(() => {
-    fetchConnection();
-    
-    // Check for OAuth callback results
-    const facebookConnected = searchParams.get('facebook_connected');
+    const facebookConnected = searchParams.get("facebook") === "connected";
     const facebookError = searchParams.get('facebook_error');
     
-    if (facebookConnected === 'true') {
+    if (facebookConnected) {
+      // Force server refresh to re-fetch server-side Supabase data
+      router.refresh();
       setSuccess('Facebook Page connected successfully!');
+      // Fetch connection data after refresh
       fetchConnection();
       // Clear the URL parameter
       window.history.replaceState({}, '', window.location.pathname);
@@ -42,7 +45,11 @@ export default function ConnectFacebookCard() {
       // Clear the URL parameter
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    fetchConnection();
+  }, []);
 
   async function fetchConnection() {
     setLoading(true);
@@ -62,16 +69,18 @@ export default function ConnectFacebookCard() {
       
       const result = await supabase
         .from("connected_accounts")
-        .select("id, platform_username, facebook_page_name, created_at, expires_at")
+        .select("id, platform_username, facebook_page_name, facebook_page_access_token, created_at, expires_at")
         .eq("platform", PLATFORMS.FACEBOOK)
+        .not("facebook_page_access_token", "is", null)
         .maybeSingle();
 
       if (result.error && result.error.message?.includes("does not exist")) {
         // Fallback: try with only basic columns
         const fallbackResult = await supabase
           .from("connected_accounts")
-          .select("id, created_at")
+          .select("id, facebook_page_access_token, created_at")
           .eq("platform", PLATFORMS.FACEBOOK)
+          .not("facebook_page_access_token", "is", null)
           .maybeSingle();
         
         if (fallbackResult.data) {

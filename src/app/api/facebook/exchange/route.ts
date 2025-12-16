@@ -241,9 +241,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Redirect to dashboard with success parameter
-    const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
-    dashboardUrl.searchParams.set('facebook_connected', 'true');
-    return NextResponse.redirect(dashboardUrl);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
+    return NextResponse.redirect(`${appUrl}/dashboard/accounts?facebook=connected`);
   } catch (error: unknown) {
     console.error('Facebook OAuth exchange error:', error);
     const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
