@@ -27,6 +27,10 @@ export default function AccountsPage() {
 function AccountsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const facebookConnected = searchParams.get("facebook") === "connected";
+  const youtubeConnected = searchParams.get("youtube_connected");
+  const facebookError = searchParams.get("facebook_error");
+  const youtubeError = searchParams.get("youtube_error");
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -63,6 +67,7 @@ function AccountsPageContent() {
       const result = await supabase
         .from("connected_accounts")
         .select("id, platform, platform_username, facebook_page_name, facebook_page_access_token, created_at, expires_at")
+        .eq("user_id", session.user.id)
         .order("created_at", { ascending: false });
 
       if (result.error && result.error.message?.includes("does not exist")) {
@@ -70,6 +75,7 @@ function AccountsPageContent() {
         const fallbackResult = await supabase
           .from("connected_accounts")
           .select("id, platform, created_at")
+          .eq("user_id", session.user.id)
           .order("created_at", { ascending: false });
         
         accountsData = fallbackResult.data?.map(acc => ({
@@ -106,13 +112,8 @@ function AccountsPageContent() {
     }
   }
 
-  // Check for OAuth callback and force server refresh
+  // Force a server refresh after OAuth redirect so server components re-fetch data
   useEffect(() => {
-    const facebookConnected = searchParams.get("facebook") === "connected";
-    const youtubeConnected = searchParams.get('youtube_connected');
-    const facebookError = searchParams.get('facebook_error');
-    const youtubeError = searchParams.get('youtube_error');
-    
     // Force server refresh if Facebook OAuth completed
     if (facebookConnected) {
       console.log('Facebook OAuth callback detected, refreshing data...');
@@ -145,7 +146,7 @@ function AccountsPageContent() {
         window.history.replaceState({}, '', window.location.pathname);
       }, 100);
     }
-  }, [searchParams, router]);
+  }, [facebookConnected, youtubeConnected, facebookError, youtubeError, router]);
 
   useEffect(() => {
     // Fetch accounts data on initial load

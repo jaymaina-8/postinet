@@ -34,7 +34,7 @@ export default function ConnectFacebookCard() {
       setSuccess('Facebook Page connected successfully!');
       fetchConnection();
     }
-  }, [facebookConnected, router]);
+  }, [facebookConnected]);
 
   useEffect(() => {
     if (facebookError) {

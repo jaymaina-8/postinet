@@ -246,10 +246,20 @@ export async function GET(req: NextRequest) {
       throw new Error('NEXT_PUBLIC_APP_URL is not set');
     }
 
-    return redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?facebook=connected`
-    );
+    return redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?facebook=connected`);
   } catch (error: unknown) {
+    // `redirect()` throws a NEXT_REDIRECT error. Do not swallow it.
+    if (
+      error &&
+      typeof error === 'object' &&
+      'digest' in error &&
+      typeof (error as { digest?: unknown }).digest === 'string' &&
+      ((error as { digest: string }).digest.startsWith('NEXT_REDIRECT') ||
+        (error as { digest: string }).digest.includes('NEXT_REDIRECT'))
+    ) {
+      throw error;
+    }
+
     console.error('Facebook OAuth exchange error:', error);
     const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
     const message = error instanceof Error ? error.message : 'Failed to complete Facebook OAuth';

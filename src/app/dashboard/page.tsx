@@ -10,6 +10,7 @@ interface ConnectedAccount {
   platform: string;
   facebook_page_name: string | null;
   platform_username: string | null;
+  facebook_page_access_token?: string | null;
 }
 
 interface UserStats {
@@ -54,7 +55,8 @@ export default function DashboardPage() {
       
       const accountsResult = await supabase
         .from("connected_accounts")
-        .select("platform, facebook_page_name, platform_username");
+        .select("platform, facebook_page_name, platform_username, facebook_page_access_token")
+        .eq("user_id", session.user.id);
 
       if (accountsResult.error && accountsResult.error.message?.includes("does not exist")) {
         // Fallback: try with only platform column
@@ -72,7 +74,16 @@ export default function DashboardPage() {
         accounts = accountsResult.data || [];
       }
 
-      const connectedPlatforms = accounts.map((a: ConnectedAccount) => a.platform) || [];
+      const connectedPlatforms =
+        accounts
+          .filter((a: ConnectedAccount) => {
+            // DB is the source of truth: Facebook is only "connected" if page token exists
+            if (a.platform === PLATFORMS.FACEBOOK) {
+              return a.facebook_page_access_token != null;
+            }
+            return true;
+          })
+          .map((a: ConnectedAccount) => a.platform) || [];
 
       // Fetch posts stats
       const { data: posts, error: postsError } = await supabase
