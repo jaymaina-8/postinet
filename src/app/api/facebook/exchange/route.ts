@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
@@ -241,8 +242,13 @@ export async function GET(req: NextRequest) {
     }
 
     // Redirect to dashboard with success parameter
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
-    return NextResponse.redirect(`${appUrl}/dashboard/accounts?facebook=connected`);
+    if (!process.env.NEXT_PUBLIC_APP_URL) {
+      throw new Error('NEXT_PUBLIC_APP_URL is not set');
+    }
+
+    return redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?facebook=connected`
+    );
   } catch (error: unknown) {
     console.error('Facebook OAuth exchange error:', error);
     const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);

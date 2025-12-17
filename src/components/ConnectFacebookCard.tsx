@@ -19,33 +19,28 @@ type ConnectedAccount = {
 export default function ConnectFacebookCard() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const facebookConnected = searchParams.get("facebook") === "connected";
+  const facebookError = searchParams.get("facebook_error");
   const [account, setAccount] = useState<ConnectedAccount | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Check for OAuth callback and force server refresh
+  // Force a server refresh after OAuth redirect so server components re-fetch data
   useEffect(() => {
-    const facebookConnected = searchParams.get("facebook") === "connected";
-    const facebookError = searchParams.get('facebook_error');
-    
     if (facebookConnected) {
-      // Force server refresh to re-fetch server-side Supabase data
       router.refresh();
       setSuccess('Facebook Page connected successfully!');
-      // Fetch connection data after refresh
       fetchConnection();
-      // Clear the URL parameter
-      window.history.replaceState({}, '', window.location.pathname);
     }
-    
+  }, [facebookConnected, router]);
+
+  useEffect(() => {
     if (facebookError) {
       setError(decodeURIComponent(facebookError));
-      // Clear the URL parameter
-      window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [searchParams, router]);
+  }, [facebookError]);
 
   useEffect(() => {
     fetchConnection();
@@ -70,6 +65,7 @@ export default function ConnectFacebookCard() {
       const result = await supabase
         .from("connected_accounts")
         .select("id, platform_username, facebook_page_name, facebook_page_access_token, created_at, expires_at")
+        .eq("user_id", session.user.id)
         .eq("platform", PLATFORMS.FACEBOOK)
         .not("facebook_page_access_token", "is", null)
         .maybeSingle();
@@ -79,6 +75,7 @@ export default function ConnectFacebookCard() {
         const fallbackResult = await supabase
           .from("connected_accounts")
           .select("id, facebook_page_access_token, created_at")
+          .eq("user_id", session.user.id)
           .eq("platform", PLATFORMS.FACEBOOK)
           .not("facebook_page_access_token", "is", null)
           .maybeSingle();
