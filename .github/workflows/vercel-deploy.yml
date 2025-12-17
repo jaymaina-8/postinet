@@ -6,6 +6,8 @@ on:
       - main
   workflow_dispatch:
 
+# NOTE: Touching this file triggers a new deploy workflow run.
+
 concurrency:
   group: vercel-production-${{ github.ref }}
   cancel-in-progress: true
