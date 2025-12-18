@@ -15,6 +15,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # Ensure Vercel CLI runs in the correct team/org scope.
+      VERCEL_SCOPE: ${{ secrets.VERCEL_ORG_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,6 +28,24 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Set Vercel deploy git author (CI)
+        shell: bash
+        run: |
+          # Vercel may block CLI deployments when the *commit author* is not a member
+          # of the Vercel team. To avoid that, we can override the git-author metadata
+          # that Vercel associates to this deployment.
+          #
+          # Set `VERCEL_DEPLOY_AUTHOR_EMAIL` in GitHub secrets to an email that belongs
+          # to a Vercel user who has access to this project/team.
+          if [ -n "${{ secrets.VERCEL_DEPLOY_AUTHOR_EMAIL }}" ]; then
+            echo "VERCEL_DEPLOY_AUTHOR_EMAIL=${{ secrets.VERCEL_DEPLOY_AUTHOR_EMAIL }}" >> "$GITHUB_ENV"
+          else
+            # Fallback: use the workflow actor's GitHub noreply email.
+            echo "VERCEL_DEPLOY_AUTHOR_EMAIL=${GITHUB_ACTOR}@users.noreply.github.com" >> "$GITHUB_ENV"
+          fi
+          echo "VERCEL_DEPLOY_AUTHOR_LOGIN=${GITHUB_ACTOR}" >> "$GITHUB_ENV"
+          echo "VERCEL_DEPLOY_AUTHOR_NAME=${GITHUB_ACTOR}" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         run: npm ci
 
@@ -32,19 +53,30 @@ jobs:
         run: npm i -g vercel@latest
 
       - name: Pull Vercel env + project settings
-        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Build (prebuilt)
-        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+        run: vercel build --prod --scope="$VERCEL_SCOPE" --token="${{ secrets.VERCEL_TOKEN }}"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy (production)
-        run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
+        run: |
+          vercel deploy \
+            --prebuilt \
+            --prod \
+            --scope="$VERCEL_SCOPE" \
+            --meta githubDeployment="1" \
+            --meta githubCommitSha="${GITHUB_SHA}" \
+            --meta githubCommitRef="${GITHUB_REF_NAME}" \
+            --meta githubCommitAuthorLogin="${VERCEL_DEPLOY_AUTHOR_LOGIN}" \
+            --meta githubCommitAuthorName="${VERCEL_DEPLOY_AUTHOR_NAME}" \
+            --meta githubCommitAuthorEmail="${VERCEL_DEPLOY_AUTHOR_EMAIL}" \
+            --token="${{ secrets.VERCEL_TOKEN }}"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
