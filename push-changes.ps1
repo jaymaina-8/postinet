@@ -119,7 +119,7 @@ if (-not (HasUpstream)) {
   git push -u origin $branch
 } elseif ($ahead -gt 0) {
   Write-Host "You have $ahead local commit(s) not on origin/$branch. Pushing..." -ForegroundColor DarkYellow
-  git push
+  git push origin $branch
 } else {
   Write-Host "Nothing to push (origin/$branch is up to date)." -ForegroundColor Green
 }
