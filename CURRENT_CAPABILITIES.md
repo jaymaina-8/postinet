@@ -67,13 +67,12 @@
 ---
 
 ### 4. **Post Scheduling** ✅
-**Status:** Fully functional (posting is placeholder until X API keys available)
+**Status:** Scheduling UI + DB are functional (automatic publishing currently disabled)
 
 **What it does:**
 - ✅ Schedule posts for future dates/times
 - ✅ View all scheduled posts
 - ✅ Cancel scheduled posts
-- ✅ Automatic processing via Vercel Cron Job (every 5 minutes)
 - ✅ Status tracking (pending, posted, failed, cancelled)
 - ⚠️ **Posting to Twitter**: Currently simulated (ready for API keys)
 
@@ -82,7 +81,7 @@
 - Select a draft post
 - Choose date and time
 - Click "Schedule Post"
-- Scheduled posts are automatically processed by cron job
+- Scheduled posts require a publishing runner (to be reintroduced later)
 
 ---
 
@@ -110,7 +109,6 @@
 - ✅ OAuth connection flow (connect Twitter account)
 - ✅ Token storage in database
 - ✅ Scheduling system ready
-- ✅ Cron job endpoint ready
 - ⚠️ **Actual posting**: Placeholder (simulates posting until API keys added)
 
 **What's needed:**
@@ -230,8 +228,7 @@ To get everything working:
 - [ ] Run `db/seed_templates.sql` to add starter templates
 - [ ] Create `content` bucket in Supabase Storage (see `db/storage_setup.md`)
 - [ ] Set `OPENAI_API_KEY` in environment variables
-- [ ] Deploy to Vercel and configure cron job (see `CRON_SETUP.md`)
-- [ ] (Optional) Set `CRON_SECRET` for cron job security
+- [ ] Deploy to Vercel
 
 Once Twitter/X API keys are available:
 - [ ] Implement `lib/twitterClient.ts`

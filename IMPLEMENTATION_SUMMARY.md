@@ -52,17 +52,10 @@
 **Database Migration:**
 - Run updated `db/supabase_migrations.sql` to create `scheduled_posts` table
 
-### 6. Vercel Cron Job
-- ✅ Created `/api/scheduler/run` endpoint
-- ✅ Configured `vercel.json` with cron job (runs every 5 minutes)
-- ✅ Processes scheduled posts that are due
-- ✅ Placeholder for Twitter posting (ready for API keys)
-- ✅ Error handling and status updates
-
-**Setup Required:**
-1. Deploy to Vercel
-2. Verify cron job in Vercel Dashboard (Settings → Cron Jobs)
-3. Optionally set `CRON_SECRET` environment variable for security
+### 6. Scheduled Publishing Runner (Disabled)
+- ⛔ Automatic cron-based publishing has been removed (it was unreliable).
+- ✅ The scheduling UI + DB schema remain; you can still create/cancel scheduled posts.
+- ⚠️ Reintroduce an automated runner later (Vercel Cron, Supabase Edge cron, or an external scheduler) once stable.
 
 ## 📋 Next Steps
 
@@ -90,13 +83,11 @@
 4. **Environment Variables**
    ```env
    OPENAI_API_KEY=your_openai_key
-   CRON_SECRET=your_optional_cron_secret
    ```
 
 5. **Vercel Deployment**
    - Deploy to Vercel
-   - Verify cron job configuration
-   - See: `CRON_SETUP.md`
+   - No cron configuration required
 
 ### When Twitter/X API Keys Are Available
 
@@ -123,7 +114,6 @@
 - `POST /api/templates` - Create template (requires auth)
 - `PUT /api/templates` - Update template (requires auth)
 - `DELETE /api/templates` - Delete template (requires auth)
-- `GET /api/scheduler/run` - Cron job endpoint (called by Vercel)
 
 ## 📁 Files Created/Modified
 
@@ -139,8 +129,7 @@
 - `src/app/dashboard/templates/page.tsx` - Templates page
 - `db/storage_setup.md` - Storage setup guide
 - `db/seed_templates.sql` - Template seeding SQL
-- `vercel.json` - Cron job configuration
-- `CRON_SETUP.md` - Cron setup guide
+- `vercel.json` - Serverless function settings
 
 ### Modified Files
 - `src/app/api/generate/route.ts` - Integrated OpenAI

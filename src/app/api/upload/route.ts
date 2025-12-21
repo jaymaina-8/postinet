@@ -5,7 +5,9 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 // This increases the body size limit from the default 1MB to 10GB
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-export const maxDuration = 36000; // 10 hours (36000 seconds) for large upload processing
+// Vercel Hobby plan requires maxDuration to be between 1 and 300 seconds.
+// Keep this aligned with `vercel.json` function settings.
+export const maxDuration = 300;
 
 async function resolveUser(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
