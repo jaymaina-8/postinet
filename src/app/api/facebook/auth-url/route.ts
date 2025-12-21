@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFacebookAuthUrl, validateFacebookEnv } from '@/lib/facebook/oauth';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/auth-helpers-nextjs';
 
-async function resolveUser(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.split(' ')[1]?.trim();
-  if (!token) return null;
-  
-  // Import supabaseAdmin dynamically to avoid circular dependencies
-  const supabaseAdmin = (await import('@/lib/supabaseAdmin')).default;
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data?.user) {
-    return null;
-  }
-  return data.user;
+function getAppUrl(req: NextRequest) {
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (envUrl) return envUrl.replace(/\/$/, '');
+  return req.nextUrl.origin;
 }
 
 /**
@@ -24,9 +15,28 @@ async function resolveUser(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await resolveUser(req);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    // Enforce authentication BEFORE starting OAuth.
+    // This must restore the session from cookies on the server.
+    const cookieStore = await cookies();
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll: () => cookieStore.getAll().map(({ name, value }) => ({ name, value })),
+      },
+    });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const appUrl = getAppUrl(req);
+      return NextResponse.redirect(new URL('/auth/login', appUrl));
     }
 
     // Validate environment variables (will throw if missing)
@@ -40,19 +50,9 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get redirect URI from environment or construct from request
-    const redirectUri = process.env.FACEBOOK_REDIRECT_URI;
-    if (!redirectUri) {
-      // Fallback: construct from request origin
-      const origin = req.headers.get('origin') || req.nextUrl.origin;
-      const fallbackRedirectUri = `${origin}/api/facebook/exchange`;
-      
-      console.warn('FACEBOOK_REDIRECT_URI not set, using fallback:', fallbackRedirectUri);
-      
-      const authUrl = getFacebookAuthUrl(fallbackRedirectUri);
-      return NextResponse.json({ url: authUrl });
-    }
-
+    // Prefer configured redirect URI; otherwise build it from NEXT_PUBLIC_APP_URL.
+    const appUrl = getAppUrl(req);
+    const redirectUri = process.env.FACEBOOK_REDIRECT_URI || `${appUrl}/api/facebook/exchange`;
     const authUrl = getFacebookAuthUrl(redirectUri);
     return NextResponse.json({ url: authUrl });
   } catch (error: unknown) {

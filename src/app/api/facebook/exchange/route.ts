@@ -1,7 +1,8 @@
-import { redirect } from 'next/navigation';
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/auth-helpers-nextjs';
 import {
   exchangeFacebookCode,
   validateFacebookEnv,
@@ -10,86 +11,10 @@ import {
   getLongLivedToken,
 } from '@/lib/facebook/oauth';
 
-async function resolveUser(req: NextRequest) {
-  // Try to get token from Authorization header first
-  const authHeader = req.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1]?.trim();
-    if (token) {
-      const { data, error } = await supabaseAdmin.auth.getUser(token);
-      if (!error && data?.user) {
-        console.log('User resolved from Authorization header');
-        return data.user;
-      }
-    }
-  }
-
-  // Try to get user from cookies (for OAuth callback flow)
-  const cookies = req.cookies;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!supabaseUrl) {
-    console.error('NEXT_PUBLIC_SUPABASE_URL not set');
-    return null;
-  }
-
-  // Extract project ref from Supabase URL
-  const projectRef = supabaseUrl.split('//')[1]?.split('.')[0];
-  if (!projectRef) {
-    console.error('Could not extract project ref from Supabase URL');
-    return null;
-  }
-
-  // Log all available cookies for debugging
-  const allCookies = cookies.getAll();
-  console.log('Available cookies:', allCookies.map(c => c.name));
-
-  // Check for Supabase auth cookie - try multiple formats
-  const cookieNames = [
-    `sb-${projectRef}-auth-token`,
-    `sb-${projectRef}-auth-token-code-verifier`,
-  ];
-
-  for (const cookieName of cookieNames) {
-    const authCookie = cookies.get(cookieName);
-    if (authCookie) {
-      console.log(`Found cookie: ${cookieName}`);
-      try {
-        // The cookie value might be base64 encoded or JSON
-        let cookieValue = authCookie.value;
-        
-        // Try to parse as JSON first
-        let session;
-        try {
-          session = JSON.parse(cookieValue);
-        } catch {
-          // Try base64 decode
-          try {
-            const decoded = Buffer.from(cookieValue, 'base64').toString('utf-8');
-            session = JSON.parse(decoded);
-          } catch {
-            console.log(`Cookie ${cookieName} is not valid JSON or base64`);
-            continue;
-          }
-        }
-        
-        const token = session?.access_token;
-        if (token) {
-          const { data, error } = await supabaseAdmin.auth.getUser(token);
-          if (!error && data?.user) {
-            console.log('User resolved from cookie:', cookieName);
-            return data.user;
-          } else {
-            console.log('Token from cookie invalid:', error?.message);
-          }
-        }
-      } catch (e) {
-        console.error(`Error parsing cookie ${cookieName}:`, e);
-      }
-    }
-  }
-
-  console.log('Could not resolve user from any source');
-  return null;
+function getAppUrl(req: NextRequest) {
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (envUrl) return envUrl.replace(/\/$/, '');
+  return req.nextUrl.origin;
 }
 
 /**
@@ -98,6 +23,8 @@ async function resolveUser(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
+    const appUrl = getAppUrl(req);
+
     // Get authorization code from query params
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code');
@@ -107,15 +34,42 @@ export async function GET(req: NextRequest) {
     // Handle OAuth errors from Facebook
     if (error) {
       console.error('Facebook OAuth error:', { error, errorDescription });
-      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
       dashboardUrl.searchParams.set('facebook_error', errorDescription || error);
       return NextResponse.redirect(dashboardUrl);
     }
 
     if (!code) {
-      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
       dashboardUrl.searchParams.set('facebook_error', 'Missing authorization code');
       return NextResponse.redirect(dashboardUrl);
+    }
+
+    // Enforce authentication immediately. The server must restore the session from cookies.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('facebook_error', 'Server configuration error');
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    const cookieStore = await cookies();
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll: () => cookieStore.getAll().map(({ name, value }) => ({ name, value })),
+      },
+    });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.warn('[FB_OAUTH] Missing authenticated user in callback; redirecting auth_required');
+      return NextResponse.redirect(
+        new URL('/dashboard/accounts?facebook_error=auth_required', appUrl)
+      );
     }
 
     // Validate environment variables
@@ -123,18 +77,13 @@ export async function GET(req: NextRequest) {
       validateFacebookEnv();
     } catch (envError: unknown) {
       console.error('Facebook OAuth environment validation failed:', envError);
-      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
       dashboardUrl.searchParams.set('facebook_error', 'Server configuration error');
       return NextResponse.redirect(dashboardUrl);
     }
 
-    // Get redirect URI from environment or construct from request
-    let redirectUri = process.env.FACEBOOK_REDIRECT_URI;
-    if (!redirectUri) {
-      const origin = req.headers.get('origin') || req.nextUrl.origin;
-      redirectUri = `${origin}/api/facebook/exchange`;
-      console.warn('FACEBOOK_REDIRECT_URI not set, using fallback:', redirectUri);
-    }
+    // Prefer configured redirect URI; otherwise build it from NEXT_PUBLIC_APP_URL.
+    const redirectUri = process.env.FACEBOOK_REDIRECT_URI || `${appUrl}/api/facebook/exchange`;
 
     // Exchange code for access token
     let tokenResponse;
@@ -142,11 +91,12 @@ export async function GET(req: NextRequest) {
       tokenResponse = await exchangeFacebookCode(code, redirectUri);
     } catch (tokenError: unknown) {
       console.error('Token exchange error:', tokenError);
-      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
       const message = tokenError instanceof Error ? tokenError.message : 'Unknown error';
       dashboardUrl.searchParams.set('facebook_error', `Failed to exchange authorization code: ${message}`);
       return NextResponse.redirect(dashboardUrl);
     }
+    console.log('[FB_OAUTH] Token exchange succeeded');
 
     // Get long-lived token
     let longLivedToken;
@@ -155,15 +105,6 @@ export async function GET(req: NextRequest) {
     } catch (llTokenError) {
       console.warn('Failed to get long-lived token, using short-lived:', llTokenError);
       longLivedToken = tokenResponse;
-    }
-
-    // Get user from session
-    const user = await resolveUser(req);
-    
-    if (!user) {
-      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
-      dashboardUrl.searchParams.set('facebook_error', 'User authentication required. Please ensure you are logged in.');
-      return NextResponse.redirect(dashboardUrl);
     }
 
     // Calculate expiration timestamp
@@ -240,28 +181,13 @@ export async function GET(req: NextRequest) {
         throw insertError;
       }
     }
+    console.log('[FB_OAUTH] connected_accounts upsert succeeded');
 
-    // Redirect to dashboard with success parameter
-    if (!process.env.NEXT_PUBLIC_APP_URL) {
-      throw new Error('NEXT_PUBLIC_APP_URL is not set');
-    }
-
-    return redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/accounts?facebook=connected`);
+    // Final successful redirect must always be consistent (UI trigger only; not auth).
+    return NextResponse.redirect(new URL('/dashboard/accounts?facebook=connected', appUrl));
   } catch (error: unknown) {
-    // `redirect()` throws a NEXT_REDIRECT error. Do not swallow it.
-    if (
-      error &&
-      typeof error === 'object' &&
-      'digest' in error &&
-      typeof (error as { digest?: unknown }).digest === 'string' &&
-      ((error as { digest: string }).digest.startsWith('NEXT_REDIRECT') ||
-        (error as { digest: string }).digest.includes('NEXT_REDIRECT'))
-    ) {
-      throw error;
-    }
-
     console.error('Facebook OAuth exchange error:', error);
-    const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+    const dashboardUrl = new URL('/dashboard/accounts', getAppUrl(req));
     const message = error instanceof Error ? error.message : 'Failed to complete Facebook OAuth';
     dashboardUrl.searchParams.set('facebook_error', message);
     return NextResponse.redirect(dashboardUrl);
