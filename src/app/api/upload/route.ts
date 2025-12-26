@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 // Next.js App Router configuration for larger file uploads
 // This increases the body size limit from the default 1MB to 10GB
@@ -9,24 +10,13 @@ export const runtime = 'nodejs';
 // Keep this aligned with `vercel.json` function settings.
 export const maxDuration = 300;
 
-async function resolveUser(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.split(' ')[1]?.trim();
-  if (!token) return null;
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data?.user) {
-    return null;
-  }
-  return data.user;
-}
-
 export async function POST(req: NextRequest) {
   try {
     // Authenticate user
-    const user = await resolveUser(req);
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

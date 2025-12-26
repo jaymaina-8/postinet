@@ -174,50 +174,41 @@ function AccountsPageContent() {
       setError(null);
       setSuccess(null);
       
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
         setError("You need to be signed in to connect an account.");
         return;
       }
 
-      const endpoint = platform === PLATFORMS.FACEBOOK 
-        ? "/api/facebook/auth-url" 
-        : "/api/youtube/auth-url";
+      if (platform === PLATFORMS.FACEBOOK) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+        if (!appUrl) {
+          throw new Error("Missing NEXT_PUBLIC_APP_URL. Please configure it and try again.");
+        }
 
-      const response = await fetch(endpoint, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+        const { error: oauthError } = await supabase.auth.signInWithOAuth({
+          provider: "facebook",
+          options: {
+            redirectTo: `${appUrl.replace(/\/$/, "")}/api/facebook/exchange`,
+          },
+        });
+        if (oauthError) throw oauthError;
+        return;
+      }
 
+      // YouTube OAuth is still initiated via our API route, but authenticated via cookies (no Bearer tokens).
+      const response = await fetch("/api/youtube/auth-url", { method: "GET" });
       if (!response.ok) {
-        // Try to parse as JSON, but handle non-JSON responses gracefully
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
           const body = await response.json();
           throw new Error(body.error || `Failed to get ${platform} OAuth URL.`);
-        } else {
-          // Non-JSON response (likely an error page)
-          const text = await response.text();
-          console.error('Non-JSON error response:', text.substring(0, 200));
-          throw new Error(`Server error (${response.status}): ${response.statusText || 'Failed to connect'}`);
         }
+        throw new Error(`Server error (${response.status}): ${response.statusText || "Failed to connect"}`);
       }
 
-      // Parse the successful response
-      const successContentType = response.headers.get('content-type');
-      if (!successContentType || !successContentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('Unexpected non-JSON success response:', text.substring(0, 200));
-        throw new Error('Received invalid response from server. Please try again.');
-      }
-      
       const { url } = await response.json();
-      if (!url) {
-        throw new Error('No OAuth URL received from server.');
-      }
+      if (!url) throw new Error("No OAuth URL received from server.");
       window.location.href = url;
     } catch (err: unknown) {
       console.error(err);
@@ -233,9 +224,8 @@ function AccountsPageContent() {
       setError(null);
       setSuccess(null);
       
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
         setError("You need to be signed in to disconnect.");
         return;
       }
@@ -246,9 +236,6 @@ function AccountsPageContent() {
       
       const response = await fetch(endpoint, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
       });
       
       if (!response.ok) {

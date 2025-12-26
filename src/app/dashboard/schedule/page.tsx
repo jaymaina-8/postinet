@@ -80,12 +80,7 @@ export default function SchedulePage() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          const token = session.access_token;
-          const res = await fetch('/api/schedule', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          const res = await fetch('/api/schedule');
 
           if (res.ok) {
             const data = await res.json();
@@ -144,7 +139,6 @@ export default function SchedulePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           postId: selectedPost.id,
@@ -188,9 +182,6 @@ export default function SchedulePage() {
 
       const res = await fetch(`/api/schedule?id=${scheduledPostId}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
       });
 
       if (!res.ok) {

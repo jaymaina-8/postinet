@@ -10,7 +10,6 @@
 export function validateFacebookEnv(): void {
   const appId = process.env.FACEBOOK_APP_ID;
   const appSecret = process.env.FACEBOOK_APP_SECRET;
-  const redirectUri = process.env.FACEBOOK_REDIRECT_URI;
 
   const missing: string[] = [];
 
@@ -20,10 +19,6 @@ export function validateFacebookEnv(): void {
 
   if (!appSecret) {
     missing.push('FACEBOOK_APP_SECRET');
-  }
-
-  if (!redirectUri) {
-    missing.push('FACEBOOK_REDIRECT_URI');
   }
 
   if (missing.length > 0) {

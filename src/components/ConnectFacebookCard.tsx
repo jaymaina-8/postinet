@@ -116,31 +116,28 @@ export default function ConnectFacebookCard() {
       setError(null);
       setSuccess(null);
       
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
         setError("You need to be signed in to connect Facebook.");
         return;
       }
 
-      const response = await fetch("/api/facebook/auth-url", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      if (!appUrl) {
+        setError("Missing NEXT_PUBLIC_APP_URL. Please configure it and try again.");
+        return;
+      }
+
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "facebook",
+        options: {
+          redirectTo: `${appUrl.replace(/\/$/, "")}/api/facebook/exchange`,
         },
       });
 
-      if (!response.ok) {
-        const body = await response.json();
-        throw new Error(body.error || "Failed to get Facebook OAuth URL.");
+      if (oauthError) {
+        throw oauthError;
       }
-
-      const { url } = await response.json();
-      
-      // Redirect to Facebook OAuth
-      window.location.href = url;
     } catch (err: unknown) {
       console.error(err);
       const message = err instanceof Error ? err.message : "Unable to start Facebook OAuth.";
@@ -155,20 +152,14 @@ export default function ConnectFacebookCard() {
       setError(null);
       setSuccess(null);
       
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
         setError("You need to be signed in to disconnect.");
         return;
       }
       
       const response = await fetch("/api/facebook/connection", {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
       });
       
       if (!response.ok) {

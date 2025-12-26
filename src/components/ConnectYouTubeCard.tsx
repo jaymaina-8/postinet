@@ -100,20 +100,14 @@ export default function ConnectYouTubeCard() {
       setError(null);
       
       // Call API to get YouTube OAuth URL
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
         setError("You need to be signed in to connect YouTube.");
         return;
       }
 
       const response = await fetch("/api/youtube/auth-url", {
         method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
       });
 
       if (!response.ok) {
@@ -136,18 +130,13 @@ export default function ConnectYouTubeCard() {
     try {
       setActionLoading(true);
       setError(null);
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.access_token) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
         setError("You need to be signed in to disconnect.");
         return;
       }
       const response = await fetch("/api/youtube/connection", {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
       });
       if (!response.ok) {
         const body = await response.json();

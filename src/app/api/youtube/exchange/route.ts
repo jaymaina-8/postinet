@@ -2,48 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
 import { exchangeYouTubeCode, validateYouTubeEnv, getYouTubeProfile } from '@/lib/youtube/oauth';
-
-async function resolveUser(req: NextRequest) {
-  // Try to get token from Authorization header first
-  const authHeader = req.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1]?.trim();
-    if (token) {
-      const { data, error } = await supabaseAdmin.auth.getUser(token);
-      if (!error && data?.user) {
-        return data.user;
-      }
-    }
-  }
-
-  // Try to get user from cookies (for OAuth callback flow)
-  const cookies = req.cookies;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!supabaseUrl) return null;
-
-  // Extract project ref from Supabase URL
-  const projectRef = supabaseUrl.split('//')[1]?.split('.')[0];
-  if (!projectRef) return null;
-
-  // Check for Supabase auth cookie
-  const authCookie = cookies.get(`sb-${projectRef}-auth-token`);
-  if (authCookie) {
-    try {
-      const session = JSON.parse(authCookie.value);
-      const token = session?.access_token;
-      if (token) {
-        const { data, error } = await supabaseAdmin.auth.getUser(token);
-        if (!error && data?.user) {
-          return data.user;
-        }
-      }
-    } catch {
-      // Cookie parsing failed
-    }
-  }
-
-  return null;
-}
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 /**
  * GET: Handle YouTube OAuth callback
@@ -51,6 +10,8 @@ async function resolveUser(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin;
+
     // Get authorization code from query params
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code');
@@ -60,13 +21,13 @@ export async function GET(req: NextRequest) {
     // Handle OAuth errors from Google
     if (error) {
       console.error('YouTube OAuth error:', { error, errorDescription });
-      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
       dashboardUrl.searchParams.set('youtube_error', errorDescription || error);
       return NextResponse.redirect(dashboardUrl);
     }
 
     if (!code) {
-      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
       dashboardUrl.searchParams.set('youtube_error', 'Missing authorization code');
       return NextResponse.redirect(dashboardUrl);
     }
@@ -76,7 +37,7 @@ export async function GET(req: NextRequest) {
       validateYouTubeEnv();
     } catch (envError: any) {
       console.error('YouTube OAuth environment validation failed:', envError);
-      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
       dashboardUrl.searchParams.set('youtube_error', 'Server configuration error');
       return NextResponse.redirect(dashboardUrl);
     }
@@ -84,9 +45,8 @@ export async function GET(req: NextRequest) {
     // Get redirect URI from environment or construct from request
     let redirectUri = process.env.YOUTUBE_REDIRECT_URI;
     if (!redirectUri) {
-      // Fallback: construct from request origin
-      const origin = req.headers.get('origin') || req.nextUrl.origin;
-      redirectUri = `${origin}/api/youtube/exchange`;
+      // Fallback: construct from app URL
+      redirectUri = `${appUrl}/api/youtube/exchange`;
       console.warn('YOUTUBE_REDIRECT_URI not set, using fallback:', redirectUri);
     }
 
@@ -96,16 +56,19 @@ export async function GET(req: NextRequest) {
       tokenResponse = await exchangeYouTubeCode(code, redirectUri);
     } catch (tokenError: any) {
       console.error('Token exchange error:', tokenError);
-      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
       dashboardUrl.searchParams.set('youtube_error', `Failed to exchange authorization code: ${tokenError.message}`);
       return NextResponse.redirect(dashboardUrl);
     }
 
-    // Get user from session
-    const user = await resolveUser(req);
+    // Get user from Supabase session cookies (no Authorization header / no manual cookie parsing)
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     
     if (!user) {
-      const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
       dashboardUrl.searchParams.set('youtube_error', 'User authentication required. Please ensure you are logged in.');
       return NextResponse.redirect(dashboardUrl);
     }
@@ -172,12 +135,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Redirect to accounts page with success parameter
-    const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+    const dashboardUrl = new URL('/dashboard/accounts', appUrl);
     dashboardUrl.searchParams.set('youtube_connected', 'true');
     return NextResponse.redirect(dashboardUrl);
   } catch (error: any) {
     console.error('YouTube OAuth exchange error:', error);
-    const dashboardUrl = new URL('/dashboard/accounts', req.nextUrl.origin);
+    const dashboardUrl = new URL('/dashboard/accounts', process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin);
     dashboardUrl.searchParams.set('youtube_error', error.message || 'Failed to complete YouTube OAuth');
     return NextResponse.redirect(dashboardUrl);
   }

@@ -43,9 +43,6 @@ export default function GenerateContentPage() {
 
       const res = await fetch('/api/upload', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
         body: formData,
       });
 
@@ -88,9 +85,6 @@ export default function GenerateContentPage() {
 
         const uploadRes = await fetch('/api/upload', {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
           body: formData,
         });
 
@@ -106,7 +100,6 @@ export default function GenerateContentPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           text: inputText,

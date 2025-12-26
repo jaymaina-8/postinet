@@ -1,25 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS, isValidPlatform } from '@/lib/platforms';
-
-async function resolveUser(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.split(' ')[1]?.trim();
-  if (!token) return null;
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data?.user) {
-    return null;
-  }
-  return data.user;
-}
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 // GET: Fetch scheduled posts for the user
 export async function GET(req: NextRequest) {
   try {
-    const user = await resolveUser(req);
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -56,7 +46,10 @@ export async function GET(req: NextRequest) {
 // POST: Schedule a new post
 export async function POST(req: NextRequest) {
   try {
-    const user = await resolveUser(req);
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -139,7 +132,10 @@ export async function POST(req: NextRequest) {
 // DELETE: Cancel a scheduled post
 export async function DELETE(req: NextRequest) {
   try {
-    const user = await resolveUser(req);
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

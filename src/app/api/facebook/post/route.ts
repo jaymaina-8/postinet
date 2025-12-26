@@ -2,20 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { PLATFORMS } from "@/lib/platforms";
 import { postToFacebook } from "@/lib/facebook/postToFacebook";
-
-async function resolveUser(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return null;
-  }
-  const token = authHeader.split(" ")[1]?.trim();
-  if (!token) return null;
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data?.user) {
-    return null;
-  }
-  return data.user;
-}
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * POST: Post content to Facebook
@@ -23,7 +10,10 @@ async function resolveUser(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const user = await resolveUser(req);
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

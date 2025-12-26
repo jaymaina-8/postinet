@@ -1,22 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getYouTubeAuthUrl, validateYouTubeEnv } from '@/lib/youtube/oauth';
-
-async function resolveUser(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.split(' ')[1]?.trim();
-  if (!token) return null;
-  
-  // Import supabaseAdmin dynamically to avoid circular dependencies
-  const supabaseAdmin = (await import('@/lib/supabaseAdmin')).default;
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data?.user) {
-    return null;
-  }
-  return data.user;
-}
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 /**
  * GET: Generate YouTube OAuth authorization URL
@@ -24,7 +8,10 @@ async function resolveUser(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    const user = await resolveUser(req);
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -39,12 +26,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get redirect URI from environment or construct from request
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin;
+
+    // Get redirect URI from environment or construct from app URL
     const redirectUri = process.env.YOUTUBE_REDIRECT_URI;
     if (!redirectUri) {
-      // Fallback: construct from request origin
-      const origin = req.headers.get('origin') || req.nextUrl.origin;
-      const fallbackRedirectUri = `${origin}/api/youtube/exchange`;
+      const fallbackRedirectUri = `${appUrl}/api/youtube/exchange`;
       
       // Try to use fallback, but warn if YOUTUBE_REDIRECT_URI is not set
       console.warn('YOUTUBE_REDIRECT_URI not set, using fallback:', fallbackRedirectUri);
@@ -65,6 +52,9 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+
+
 
 
 

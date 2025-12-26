@@ -1,27 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { PLATFORMS } from "@/lib/platforms";
-
-async function resolveUser(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return null;
-  }
-  const token = authHeader.split(" ")[1]?.trim();
-  if (!token) return null;
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !data?.user) {
-    return null;
-  }
-  return data.user;
-}
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * DELETE: Disconnect YouTube account
  * Removes the YouTube connection from connected_accounts
  */
 export async function DELETE(req: NextRequest) {
-  const user = await resolveUser(req);
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -37,6 +27,9 @@ export async function DELETE(req: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
+
+
+
 
 
 

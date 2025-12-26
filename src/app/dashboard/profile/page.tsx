@@ -123,7 +123,7 @@ export default function ProfilePage() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${(process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || window.location.origin)}/auth/reset-password`,
       });
 
       if (error) {
@@ -284,6 +284,9 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+
+
 
 
 

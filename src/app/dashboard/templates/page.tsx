@@ -60,15 +60,10 @@ export default function TemplatesPage() {
     }
   }
 
-  async function getAuthToken() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token;
-  }
-
   async function handleCreate() {
     try {
-      const token = await getAuthToken();
-      if (!token) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         alert('Please log in to create templates');
         return;
       }
@@ -77,7 +72,6 @@ export default function TemplatesPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
@@ -99,8 +93,8 @@ export default function TemplatesPage() {
     if (!editingTemplate) return;
 
     try {
-      const token = await getAuthToken();
-      if (!token) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         alert('Please log in to update templates');
         return;
       }
@@ -109,7 +103,6 @@ export default function TemplatesPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           id: editingTemplate.id,
@@ -136,17 +129,14 @@ export default function TemplatesPage() {
     }
 
     try {
-      const token = await getAuthToken();
-      if (!token) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         alert('Please log in to delete templates');
         return;
       }
 
       const res = await fetch(`/api/templates?id=${id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
 
       if (!res.ok) {

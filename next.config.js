@@ -1,13 +1,26 @@
 /** @type {import('next').NextConfig} */
+let supabaseHostname;
+try {
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    supabaseHostname = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname;
+  }
+} catch {
+  supabaseHostname = undefined;
+}
+
 const nextConfig = {
   reactStrictMode: true,
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'ewzslshgbjhecfruvsna.supabase.co',
-        pathname: '/**',
-      },
+      ...(supabaseHostname
+        ? [
+            {
+              protocol: 'https',
+              hostname: supabaseHostname,
+              pathname: '/**',
+            },
+          ]
+        : []),
     ],
   },
   // Ensure proper routing

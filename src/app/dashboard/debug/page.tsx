@@ -33,11 +33,7 @@ export default function DebugPage() {
       }
 
       // Check Facebook connection
-      const fbResponse = await fetch("/api/facebook/connection", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const fbResponse = await fetch("/api/facebook/connection");
       
       const fbData = await fbResponse.json();
 
@@ -111,5 +107,8 @@ export default function DebugPage() {
     </div>
   );
 }
+
+
+
 
 
