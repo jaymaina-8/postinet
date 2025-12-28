@@ -132,6 +132,7 @@ export default function ConnectFacebookCard() {
         provider: "facebook",
         options: {
           redirectTo: `${appUrl.replace(/\/$/, "")}/api/facebook/exchange`,
+          scopes: "public_profile",
         },
       });
 

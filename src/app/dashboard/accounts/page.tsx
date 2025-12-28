@@ -190,6 +190,7 @@ function AccountsPageContent() {
           provider: "facebook",
           options: {
             redirectTo: `${appUrl.replace(/\/$/, "")}/api/facebook/exchange`,
+            scopes: "public_profile",
           },
         });
         if (oauthError) throw oauthError;
