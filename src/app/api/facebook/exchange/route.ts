@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import {
   validateFacebookEnv,
   getFacebookProfile,
