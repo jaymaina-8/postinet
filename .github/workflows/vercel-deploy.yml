@@ -1,10 +1,14 @@
 name: Deploy to Vercel (Production)
 
+# DISABLED: Vercel Git integration handles deployments automatically
+# Uncomment below to re-enable GitHub Actions deployment
+# on:
+#   push:
+#     branches:
+#       - main
+#   workflow_dispatch:
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_dispatch:  # Only manual triggers, Git integration handles auto-deploys
 
 # NOTE: Touching this file triggers a new deploy workflow run.
 
@@ -80,6 +84,7 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
 
 
 
