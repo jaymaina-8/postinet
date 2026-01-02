@@ -55,7 +55,11 @@ function ensureFacebookOAuthIsClientOnly() {
   for (const f of files) {
     const rel = path.relative(repoRoot, f).replace(/\\/g, "/");
     const text = readText(f);
-    if (!text.includes("signInWithOAuth")) continue;
+    
+    // Check if signInWithOAuth is actually used in code (not just in comments)
+    // Look for actual usage patterns like: signInWithOAuth({ or .signInWithOAuth(
+    const hasActualUsage = /\.signInWithOAuth\s*\(|signInWithOAuth\s*\(/.test(text);
+    if (!hasActualUsage) continue;
 
     // Hard rule: any signInWithOAuth usage must be in a client component.
     const firstChunk = text.split("\n").slice(0, 10).join("\n");
