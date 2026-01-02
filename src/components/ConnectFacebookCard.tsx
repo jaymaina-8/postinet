@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS } from "@/lib/platforms";
+import { FACEBOOK_OAUTH_SCOPES } from "@/lib/facebook/scopes";
 
 type ConnectedAccount = {
   id: string;
@@ -132,7 +133,7 @@ export default function ConnectFacebookCard() {
         provider: "facebook",
         options: {
           redirectTo: `${appUrl.replace(/\/$/, "")}/api/facebook/exchange`,
-          scopes: "public_profile",
+          scopes: FACEBOOK_OAUTH_SCOPES,
         },
       });
 

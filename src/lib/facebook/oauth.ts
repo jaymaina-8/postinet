@@ -63,18 +63,15 @@ export interface FacebookPagesResponse {
 export interface FacebookUserProfile {
   id: string;
   name: string;
-  email?: string;
 }
 
 /**
- * Required scopes for Facebook API
+ * Required scopes for Facebook OAuth / API access.
+ *
+ * Hard requirement: do NOT request `email`, and do NOT rely on platform defaults.
  */
-export const FACEBOOK_SCOPES = [
-  'pages_manage_posts',
-  'pages_read_engagement',
-  'pages_show_list',
-  'pages_read_user_content',
-].join(',');
+export const FACEBOOK_SCOPES =
+  'public_profile,pages_show_list,pages_manage_metadata,pages_read_engagement';
 
 /**
  * Generate Facebook OAuth authorization URL
@@ -206,7 +203,7 @@ export async function getLongLivedToken(
 export async function getFacebookProfile(
   accessToken: string
 ): Promise<FacebookUserProfile> {
-  const profileUrl = `https://graph.facebook.com/v18.0/me?fields=id,name,email&access_token=${accessToken}`;
+  const profileUrl = `https://graph.facebook.com/v18.0/me?fields=id,name&access_token=${accessToken}`;
   
   const response = await fetch(profileUrl, {
     method: 'GET',

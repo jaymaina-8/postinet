@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS, PLATFORM_LABELS, Platform } from "@/lib/platforms";
+import { FACEBOOK_OAUTH_SCOPES } from "@/lib/facebook/scopes";
 
 interface ConnectedAccount {
   id: string;
@@ -190,7 +191,7 @@ function AccountsPageContent() {
           provider: "facebook",
           options: {
             redirectTo: `${appUrl.replace(/\/$/, "")}/api/facebook/exchange`,
-            scopes: "public_profile",
+            scopes: FACEBOOK_OAUTH_SCOPES,
           },
         });
         if (oauthError) throw oauthError;
