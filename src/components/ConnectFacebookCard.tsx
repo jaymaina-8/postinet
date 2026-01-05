@@ -134,6 +134,10 @@ export default function ConnectFacebookCard() {
         options: {
           redirectTo: `${appUrl.replace(/\/$/, "")}/api/facebook/exchange`,
           scopes: FACEBOOK_OAUTH_SCOPES,
+          queryParams: {
+            // Explicitly prevent email scope from being added
+            scope: FACEBOOK_OAUTH_SCOPES,
+          },
         },
       });
 
@@ -269,6 +273,12 @@ export default function ConnectFacebookCard() {
           <div className="bg-green-50 border border-green-200 rounded-lg p-3">
             <p className="text-sm text-green-700">{success}</p>
           </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
         )}
       </CardContent>
     </Card>

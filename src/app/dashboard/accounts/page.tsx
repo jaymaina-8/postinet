@@ -192,6 +192,10 @@ function AccountsPageContent() {
           options: {
             redirectTo: `${appUrl.replace(/\/$/, "")}/api/facebook/exchange`,
             scopes: FACEBOOK_OAUTH_SCOPES,
+            queryParams: {
+              // Explicitly prevent email scope from being added
+              scope: FACEBOOK_OAUTH_SCOPES,
+            },
           },
         });
         if (oauthError) throw oauthError;
