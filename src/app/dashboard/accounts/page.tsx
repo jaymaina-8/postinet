@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS, PLATFORM_LABELS, Platform } from "@/lib/platforms";
-import { FACEBOOK_OAUTH_SCOPES } from "@/lib/facebook/scopes";
+import { createFacebookOAuthOptions } from "@/lib/facebook/oauthHelper";
 
 interface ConnectedAccount {
   id: string;
@@ -187,16 +187,11 @@ function AccountsPageContent() {
           throw new Error("Missing NEXT_PUBLIC_APP_URL. Please configure it and try again.");
         }
 
+        // Facebook OAuth with explicit scopes and runtime guard against email scope
+        // Uses createFacebookOAuthOptions() helper to ensure email scope is never included
         const { error: oauthError } = await supabase.auth.signInWithOAuth({
           provider: "facebook",
-          options: {
-            redirectTo: `${appUrl.replace(/\/$/, "")}/api/facebook/exchange`,
-            scopes: FACEBOOK_OAUTH_SCOPES,
-            queryParams: {
-              // Explicitly prevent email scope from being added
-              scope: FACEBOOK_OAUTH_SCOPES,
-            },
-          },
+          options: createFacebookOAuthOptions(`${appUrl.replace(/\/$/, "")}/api/facebook/exchange`),
         });
         if (oauthError) throw oauthError;
         return;

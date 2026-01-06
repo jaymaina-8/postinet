@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS } from "@/lib/platforms";
-import { FACEBOOK_OAUTH_SCOPES } from "@/lib/facebook/scopes";
+import { createFacebookOAuthOptions } from "@/lib/facebook/oauthHelper";
 
 type ConnectedAccount = {
   id: string;
@@ -129,16 +129,11 @@ export default function ConnectFacebookCard() {
         return;
       }
 
+      // Facebook OAuth with explicit scopes and runtime guard against email scope
+      // Uses createFacebookOAuthOptions() helper to ensure email scope is never included
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "facebook",
-        options: {
-          redirectTo: `${appUrl.replace(/\/$/, "")}/api/facebook/exchange`,
-          scopes: FACEBOOK_OAUTH_SCOPES,
-          queryParams: {
-            // Explicitly prevent email scope from being added
-            scope: FACEBOOK_OAUTH_SCOPES,
-          },
-        },
+        options: createFacebookOAuthOptions(`${appUrl.replace(/\/$/, "")}/api/facebook/exchange`),
       });
 
       if (oauthError) {
