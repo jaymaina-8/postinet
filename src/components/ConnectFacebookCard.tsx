@@ -273,9 +273,3 @@ export default function ConnectFacebookCard() {
     </Card>
   );
 }
-
-        )}
-      </CardContent>
-    </Card>
-  );
-}
