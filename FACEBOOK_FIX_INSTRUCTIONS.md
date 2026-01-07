@@ -142,3 +142,4 @@ After making these changes:
 ⏳ **Facebook settings** - Need to add domains and redirect URIs
 ⏳ **Supabase settings** - Check and remove email scope if present
 
+
