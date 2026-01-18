@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS } from "@/lib/platforms";
-import { createFacebookLinkIdentityOptions } from "@/lib/facebook/oauthHelper";
 
 type ConnectedAccount = {
   id: string;
@@ -123,17 +122,23 @@ export default function ConnectFacebookCard() {
         return;
       }
 
-      // Use hardcoded production URL for OAuth redirect to ensure consistency
-      // Store current session before OAuth to restore it after callback
-      // The OAuth callback will handle linking Facebook to the connected_accounts table
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: "facebook",
-        options: createFacebookLinkIdentityOptions('https://postinet.pro/api/facebook/exchange'),
-      });
-
-      if (oauthError) {
-        throw oauthError;
+      // Use direct Facebook OAuth (not Supabase OAuth) to avoid PKCE state conflicts
+      // This allows connecting Facebook to an already-authenticated user without session issues
+      const response = await fetch("/api/facebook/auth-url", { method: "GET" });
+      
+      if (!response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const body = await response.json();
+          throw new Error(body.error || "Failed to get Facebook OAuth URL.");
+        }
+        throw new Error(`Failed to get Facebook OAuth URL: ${response.statusText}`);
       }
+
+      const { url } = await response.json();
+      
+      // Redirect to Facebook OAuth
+      window.location.href = url;
     } catch (err: unknown) {
       console.error(err);
       const message = err instanceof Error ? err.message : "Unable to start Facebook OAuth.";

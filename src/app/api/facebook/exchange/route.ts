@@ -8,6 +8,7 @@ import {
   getFacebookProfile,
   getFacebookPages,
   getLongLivedToken,
+  exchangeFacebookCode,
 } from '@/lib/facebook/oauth';
 
 function getAppUrl(req: NextRequest) {
@@ -61,6 +62,7 @@ export async function GET(req: NextRequest) {
       return response;
     }
 
+    // Create Supabase client to get current user session
     const cookieStore = await cookies();
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
@@ -73,32 +75,36 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Exchange the authorization code for a session
-    // This creates/updates the Supabase session with Facebook provider token
-    // The session cookies are automatically set on the response
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-    if (exchangeError) {
-      console.error('[FB_OAUTH] Failed to exchange code for session:', exchangeError);
-      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
-      dashboardUrl.searchParams.set('facebook_error', 'Failed to connect Facebook. Please try again.');
-      response.headers.set('Location', dashboardUrl.toString());
-      return response;
-    }
-    console.log('[FB_OAUTH] Successful code exchange - session established with Facebook provider token');
-
+    // Get the current authenticated user from the existing session
+    // This is a direct Facebook OAuth flow, not Supabase OAuth, so we don't exchange code for session
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) {
-      console.error('[FB_OAUTH] Missing authenticated user after code exchange');
+      console.error('[FB_OAUTH] User not authenticated - must be logged in to connect Facebook');
       const dashboardUrl = new URL('/dashboard/accounts', appUrl);
-      dashboardUrl.searchParams.set('facebook_error', 'Authentication error. Please log in and try again.');
+      dashboardUrl.searchParams.set('facebook_error', 'You must be logged in to connect Facebook. Please log in and try again.');
       response.headers.set('Location', dashboardUrl.toString());
       return response;
     }
     
     console.log('[FB_OAUTH] User authenticated:', { userId: user.id, email: user.email });
+
+    // Exchange Facebook authorization code for access token (direct Facebook OAuth)
+    const redirectUri = 'https://postinet.pro/api/facebook/exchange';
+    let facebookToken;
+    try {
+      facebookToken = await exchangeFacebookCode(code, redirectUri);
+      console.log('[FB_OAUTH] Successfully exchanged Facebook code for access token');
+    } catch (exchangeError) {
+      console.error('[FB_OAUTH] Failed to exchange Facebook code:', exchangeError);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      const message = exchangeError instanceof Error ? exchangeError.message : 'Failed to connect Facebook';
+      dashboardUrl.searchParams.set('facebook_error', message);
+      response.headers.set('Location', dashboardUrl.toString());
+      return response;
+    }
 
     // Validate environment variables
     try {
@@ -111,26 +117,14 @@ export async function GET(req: NextRequest) {
       return response;
     }
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const providerToken = session?.provider_token;
-    if (!providerToken) {
-      console.error('[FB_OAUTH] Session missing provider_token after code exchange');
-      // Redirect to dashboard (not login) - user session is still valid
-      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
-      dashboardUrl.searchParams.set('facebook_error', 'Failed to retrieve Facebook token. Please try again.');
-      response.headers.set('Location', dashboardUrl.toString());
-      return response;
-    }
-
     // Get long-lived token (for stable Page posting)
     let longLivedToken;
     try {
-      longLivedToken = await getLongLivedToken(providerToken);
+      longLivedToken = await getLongLivedToken(facebookToken.access_token);
+      console.log('[FB_OAUTH] Successfully obtained long-lived Facebook token');
     } catch (llTokenError) {
-      console.warn('Failed to get long-lived token, using short-lived:', llTokenError);
-      longLivedToken = { access_token: providerToken, token_type: 'bearer' };
+      console.warn('[FB_OAUTH] Failed to get long-lived token, using short-lived:', llTokenError);
+      longLivedToken = { access_token: facebookToken.access_token, token_type: 'bearer' };
     }
 
     // Calculate expiration timestamp
