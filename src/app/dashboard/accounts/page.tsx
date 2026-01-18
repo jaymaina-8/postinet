@@ -183,10 +183,9 @@ function AccountsPageContent() {
 
       if (platform === PLATFORMS.FACEBOOK) {
         // Use hardcoded production URL for OAuth redirect to ensure consistency
-        // Use linkIdentity for authenticated users to preserve existing session
-        // CRITICAL: Never use signInWithOAuth when user is already logged in
-        // linkIdentity links Facebook to the existing authenticated user without creating a new session
-        const { error: oauthError } = await supabase.auth.linkIdentity({
+        // Store current session before OAuth to restore it after callback
+        // The OAuth callback will handle linking Facebook to the connected_accounts table
+        const { error: oauthError } = await supabase.auth.signInWithOAuth({
           provider: "facebook",
           options: createFacebookLinkIdentityOptions('https://postinet.pro/api/facebook/exchange'),
         });

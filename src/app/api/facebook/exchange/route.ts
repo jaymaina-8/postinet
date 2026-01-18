@@ -74,18 +74,17 @@ export async function GET(req: NextRequest) {
     });
 
     // Exchange the authorization code for a session
-    // For linkIdentity flow, this links Facebook to the existing authenticated user
-    // The session is preserved and cookies are set on the response
+    // This creates/updates the Supabase session with Facebook provider token
+    // The session cookies are automatically set on the response
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (exchangeError) {
       console.error('[FB_OAUTH] Failed to exchange code for session:', exchangeError);
-      // Redirect to dashboard (not login) - user may still be authenticated
       const dashboardUrl = new URL('/dashboard/accounts', appUrl);
-      dashboardUrl.searchParams.set('facebook_error', 'Failed to link Facebook account. Please try again.');
+      dashboardUrl.searchParams.set('facebook_error', 'Failed to connect Facebook. Please try again.');
       response.headers.set('Location', dashboardUrl.toString());
       return response;
     }
-    console.log('[FB_OAUTH] Successful code exchange - Facebook identity linked');
+    console.log('[FB_OAUTH] Successful code exchange - session established with Facebook provider token');
 
     const {
       data: { user },
@@ -93,12 +92,13 @@ export async function GET(req: NextRequest) {
 
     if (!user) {
       console.error('[FB_OAUTH] Missing authenticated user after code exchange');
-      // Redirect to dashboard (not login) - session may still be valid
       const dashboardUrl = new URL('/dashboard/accounts', appUrl);
-      dashboardUrl.searchParams.set('facebook_error', 'Authentication error. Please try connecting again.');
+      dashboardUrl.searchParams.set('facebook_error', 'Authentication error. Please log in and try again.');
       response.headers.set('Location', dashboardUrl.toString());
       return response;
     }
+    
+    console.log('[FB_OAUTH] User authenticated:', { userId: user.id, email: user.email });
 
     // Validate environment variables
     try {
