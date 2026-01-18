@@ -222,3 +222,16 @@ export default function TermsPage() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+

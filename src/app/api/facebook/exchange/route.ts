@@ -11,9 +11,9 @@ import {
 } from '@/lib/facebook/oauth';
 
 function getAppUrl(req: NextRequest) {
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (envUrl) return envUrl.replace(/\/$/, '');
-  return req.nextUrl.origin;
+  // Use hardcoded production URL to ensure consistent redirects
+  // This prevents redirect issues when OAuth callback completes
+  return 'https://postinet.pro';
 }
 
 /**
@@ -23,6 +23,9 @@ function getAppUrl(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const appUrl = getAppUrl(req);
+    // Always redirect to /dashboard after successful OAuth (never /login)
+    // This preserves the user's authenticated session
+    // Redirect to /dashboard explicitly as required
     const successRedirect = new URL('/dashboard/accounts?facebook=connected', appUrl);
     const response = NextResponse.redirect(successRedirect);
 
@@ -70,29 +73,30 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // If this route is used as the Supabase OAuth redirect target (PKCE),
-    // exchange the code for a session and set auth cookies on the redirect response.
+    // Exchange the authorization code for a session
+    // For linkIdentity flow, this links Facebook to the existing authenticated user
+    // The session is preserved and cookies are set on the response
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (exchangeError) {
-      console.warn('[FB_OAUTH] Failed to exchange code for session; redirecting auth_required');
-      response.headers.set(
-        'Location',
-        new URL('/dashboard/accounts?facebook_error=auth_required', appUrl).toString()
-      );
+      console.error('[FB_OAUTH] Failed to exchange code for session:', exchangeError);
+      // Redirect to dashboard (not login) - user may still be authenticated
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('facebook_error', 'Failed to link Facebook account. Please try again.');
+      response.headers.set('Location', dashboardUrl.toString());
       return response;
     }
-    console.log('[FB_OAUTH] Successful session restore via PKCE callback');
+    console.log('[FB_OAUTH] Successful code exchange - Facebook identity linked');
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) {
-      console.warn('[FB_OAUTH] Missing authenticated user in callback; redirecting auth_required');
-      response.headers.set(
-        'Location',
-        new URL('/dashboard/accounts?facebook_error=auth_required', appUrl).toString()
-      );
+      console.error('[FB_OAUTH] Missing authenticated user after code exchange');
+      // Redirect to dashboard (not login) - session may still be valid
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('facebook_error', 'Authentication error. Please try connecting again.');
+      response.headers.set('Location', dashboardUrl.toString());
       return response;
     }
 
@@ -112,11 +116,11 @@ export async function GET(req: NextRequest) {
     } = await supabase.auth.getSession();
     const providerToken = session?.provider_token;
     if (!providerToken) {
-      console.warn('[FB_OAUTH] Session missing provider_token; redirecting auth_required');
-      response.headers.set(
-        'Location',
-        new URL('/dashboard/accounts?facebook_error=auth_required', appUrl).toString()
-      );
+      console.error('[FB_OAUTH] Session missing provider_token after code exchange');
+      // Redirect to dashboard (not login) - user session is still valid
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('facebook_error', 'Failed to retrieve Facebook token. Please try again.');
+      response.headers.set('Location', dashboardUrl.toString());
       return response;
     }
 

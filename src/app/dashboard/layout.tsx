@@ -78,6 +78,32 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function checkAuth() {
       try {
+        // Wait for session to be fully loaded before checking auth
+        // This prevents premature redirects during OAuth callback hydration
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.warn('Session check error:', sessionError);
+        }
+
+        // If no session, check if user exists (might be during OAuth callback)
+        if (!session) {
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          if (userError || !user) {
+            console.warn('Auth check failed - no session or user:', userError);
+            router.push("/auth/login");
+            return;
+          }
+          // User exists but no session - wait a bit for session hydration
+          // This can happen during OAuth callback before cookies are set
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const { data: { session: retrySession } } = await supabase.auth.getSession();
+          if (!retrySession) {
+            router.push("/auth/login");
+            return;
+          }
+        }
+        
         const { data: { user }, error } = await supabase.auth.getUser();
         if (error || !user) {
           console.warn('Auth check failed:', error);
@@ -115,6 +141,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     checkAuth();
   }, [router]);
 
+  // CRITICAL: Never redirect during loading - wait for session hydration
+  // This prevents redirects during OAuth callback before session is restored
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -123,6 +151,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  // Only redirect if we've confirmed no authentication after loading completes
   if (!isAuthenticated) {
     return null;
   }
@@ -137,4 +166,3 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-

@@ -58,6 +58,36 @@ export function createFacebookOAuthOptions(redirectTo: string) {
 }
 
 /**
+ * Creates validated Facebook linkIdentity options for authenticated users.
+ * 
+ * CRITICAL: Use linkIdentity (not signInWithOAuth) when user is already authenticated.
+ * This preserves the existing session and links Facebook as an additional identity.
+ * 
+ * @param redirectTo - The OAuth redirect URL
+ * @returns Validated linkIdentity options object
+ */
+export function createFacebookLinkIdentityOptions(redirectTo: string) {
+  // Validate the constant itself
+  validateNoEmailScope(FACEBOOK_OAUTH_SCOPES, 'FACEBOOK_OAUTH_SCOPES constant');
+
+  // Create options with explicit scopes for linkIdentity
+  const options = {
+    redirectTo,
+    scopes: FACEBOOK_OAUTH_SCOPES,
+    queryParams: {
+      // Explicitly set scope in query params to override any Supabase defaults
+      scope: FACEBOOK_OAUTH_SCOPES,
+    },
+  };
+
+  // Final runtime validation before returning
+  validateNoEmailScope(options.scopes, 'options.scopes');
+  validateNoEmailScope(options.queryParams.scope, 'options.queryParams.scope');
+
+  return options;
+}
+
+/**
  * Validates Facebook OAuth options before use.
  * Throws if email scope is detected or scopes are missing.
  */
@@ -75,5 +105,4 @@ export function validateFacebookOAuthOptions(options: {
     validateNoEmailScope(options.queryParams.scope, 'provided options.queryParams.scope');
   }
 }
-
 

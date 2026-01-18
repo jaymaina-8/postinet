@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS } from "@/lib/platforms";
-import { createFacebookOAuthOptions } from "@/lib/facebook/oauthHelper";
+import { createFacebookLinkIdentityOptions } from "@/lib/facebook/oauthHelper";
 
 type ConnectedAccount = {
   id: string;
@@ -123,17 +123,13 @@ export default function ConnectFacebookCard() {
         return;
       }
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-      if (!appUrl) {
-        setError("Missing NEXT_PUBLIC_APP_URL. Please configure it and try again.");
-        return;
-      }
-
-      // Facebook OAuth with explicit scopes and runtime guard against email scope
-      // Uses createFacebookOAuthOptions() helper to ensure email scope is never included
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      // Use hardcoded production URL for OAuth redirect to ensure consistency
+      // Use linkIdentity for authenticated users to preserve existing session
+      // CRITICAL: Never use signInWithOAuth when user is already logged in
+      // linkIdentity links Facebook to the existing authenticated user without creating a new session
+      const { error: oauthError } = await supabase.auth.linkIdentity({
         provider: "facebook",
-        options: createFacebookOAuthOptions(`${appUrl.replace(/\/$/, "")}/api/facebook/exchange`),
+        options: createFacebookLinkIdentityOptions('https://postinet.pro/api/facebook/exchange'),
       });
 
       if (oauthError) {
