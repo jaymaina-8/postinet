@@ -209,7 +209,15 @@ export async function GET(req: NextRequest) {
     // Final successful redirect must always be consistent (UI trigger only; not auth).
     return response;
   } catch (error: unknown) {
-    console.error('Facebook OAuth exchange error:', error);
+    console.error('[FB_OAUTH] Facebook OAuth exchange error:', error);
+    
+    // Log detailed error information for debugging
+    if (error instanceof Error) {
+      console.error('[FB_OAUTH] Error name:', error.name);
+      console.error('[FB_OAUTH] Error message:', error.message);
+      console.error('[FB_OAUTH] Error stack:', error.stack);
+    }
+    
     const dashboardUrl = new URL('/dashboard/accounts', getAppUrl(req));
     const message = error instanceof Error ? error.message : 'Failed to complete Facebook OAuth';
     dashboardUrl.searchParams.set('facebook_error', message);
