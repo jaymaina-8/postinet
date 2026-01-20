@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS, PLATFORM_LABELS, Platform } from "@/lib/platforms";
+import { createFacebookLinkIdentityOptions } from "@/lib/facebook/oauthHelper";
 
 interface ConnectedAccount {
   id: string;
@@ -176,13 +177,14 @@ function AccountsPageContent() {
     if (platform === PLATFORMS.FACEBOOK) {
       // Use Supabase linkIdentity for Facebook account connection
       // This is an identity-linking flow, NOT a login flow
+      // IMPORTANT: linkIdentity MUST be called from browser client (createBrowserClient)
+      // Server clients cannot initiate OAuth flows - they will cause 404 errors
       // Do NOT wrap in try/catch - OAuth redirects are not synchronous promises
       // Do NOT show success/error states before redirect completes
+      const options = createFacebookLinkIdentityOptions('https://postinet.pro/api/facebook/exchange');
       await supabase.auth.linkIdentity({
         provider: 'facebook',
-        options: {
-          redirectTo: 'https://postinet.pro/api/facebook/exchange'
-        }
+        options
       });
       // Note: If linkIdentity succeeds, the browser will redirect to Facebook
       // The redirect flow handles everything - no error handling needed here
