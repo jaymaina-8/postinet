@@ -111,40 +111,24 @@ export default function ConnectFacebookCard() {
   }
 
   async function handleConnect() {
-    try {
-      setActionLoading(true);
-      setError(null);
-      setSuccess(null);
-      
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        setError("You need to be signed in to connect Facebook.");
-        return;
+    setActionLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    // Use Supabase linkIdentity for Facebook account connection
+    // This is an identity-linking flow, NOT a login flow
+    // Do NOT wrap in try/catch - OAuth redirects are not synchronous promises
+    // Do NOT show success/error states before redirect completes
+    await supabase.auth.linkIdentity({
+      provider: 'facebook',
+      options: {
+        redirectTo: 'https://postinet.pro/api/facebook/exchange'
       }
-
-      // Use direct Facebook OAuth (not Supabase OAuth) to avoid PKCE state conflicts
-      // This allows connecting Facebook to an already-authenticated user without session issues
-      const response = await fetch("/api/facebook/auth-url", { method: "GET" });
-      
-      if (!response.ok) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const body = await response.json();
-          throw new Error(body.error || "Failed to get Facebook OAuth URL.");
-        }
-        throw new Error(`Failed to get Facebook OAuth URL: ${response.statusText}`);
-      }
-
-      const { url } = await response.json();
-      
-      // Redirect to Facebook OAuth
-      window.location.href = url;
-    } catch (err: unknown) {
-      console.error(err);
-      const message = err instanceof Error ? err.message : "Unable to start Facebook OAuth.";
-      setError(message);
-      setActionLoading(false);
-    }
+    });
+    
+    // Note: If linkIdentity succeeds, the browser will redirect to Facebook
+    // If it fails (e.g., user not logged in), the promise resolves with an error
+    // but we don't handle it here - the redirect flow handles everything
   }
 
   async function handleDisconnect() {

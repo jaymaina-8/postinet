@@ -169,39 +169,28 @@ function AccountsPageContent() {
   }
 
   async function handleConnect(platform: Platform) {
-    try {
-      setActionLoading(platform);
-      setError(null);
-      setSuccess(null);
-      
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        setError("You need to be signed in to connect an account.");
-        return;
-      }
+    setActionLoading(platform);
+    setError(null);
+    setSuccess(null);
 
-      if (platform === PLATFORMS.FACEBOOK) {
-        // Use direct Facebook OAuth (not Supabase OAuth) to avoid PKCE state conflicts
-        // This allows connecting Facebook to an already-authenticated user without session issues
-        const response = await fetch("/api/facebook/auth-url", { method: "GET" });
-        
-        if (!response.ok) {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const body = await response.json();
-            throw new Error(body.error || "Failed to get Facebook OAuth URL.");
-          }
-          throw new Error(`Failed to get Facebook OAuth URL: ${response.statusText}`);
+    if (platform === PLATFORMS.FACEBOOK) {
+      // Use Supabase linkIdentity for Facebook account connection
+      // This is an identity-linking flow, NOT a login flow
+      // Do NOT wrap in try/catch - OAuth redirects are not synchronous promises
+      // Do NOT show success/error states before redirect completes
+      await supabase.auth.linkIdentity({
+        provider: 'facebook',
+        options: {
+          redirectTo: 'https://postinet.pro/api/facebook/exchange'
         }
+      });
+      // Note: If linkIdentity succeeds, the browser will redirect to Facebook
+      // The redirect flow handles everything - no error handling needed here
+      return;
+    }
 
-        const { url } = await response.json();
-        
-        // Redirect to Facebook OAuth
-        window.location.href = url;
-        return;
-      }
-
-      // YouTube OAuth is still initiated via our API route, but authenticated via cookies (no Bearer tokens).
+    // YouTube OAuth is still initiated via our API route
+    try {
       const response = await fetch("/api/youtube/auth-url", { method: "GET" });
       if (!response.ok) {
         const contentType = response.headers.get("content-type");
