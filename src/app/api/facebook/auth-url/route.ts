@@ -7,8 +7,11 @@ import { getFacebookAuthUrl } from '@/lib/facebook/oauth';
  */
 export async function GET(req: NextRequest) {
   try {
-    // Use hardcoded production URL for consistent OAuth redirects
-    const redirectUri = 'https://postinet.pro/api/facebook/exchange';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin;
+    let redirectUri = process.env.FACEBOOK_REDIRECT_URI?.trim();
+    if (!redirectUri) {
+      redirectUri = `${appUrl}/api/facebook/exchange`;
+    }
     
     // Generate Facebook OAuth URL with direct Facebook OAuth (not Supabase)
     // This bypasses Supabase's PKCE state management to avoid conflicts with existing sessions

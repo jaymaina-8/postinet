@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS, PLATFORM_LABELS, Platform } from "@/lib/platforms";
-import { createFacebookLinkIdentityOptions } from "@/lib/facebook/oauthHelper";
 
 interface ConnectedAccount {
   id: string;
@@ -175,19 +174,26 @@ function AccountsPageContent() {
     setSuccess(null);
 
     if (platform === PLATFORMS.FACEBOOK) {
-      // Use Supabase linkIdentity for Facebook account connection
-      // This is an identity-linking flow, NOT a login flow
-      // IMPORTANT: linkIdentity MUST be called from browser client (createBrowserClient)
-      // Server clients cannot initiate OAuth flows - they will cause 404 errors
-      // Do NOT wrap in try/catch - OAuth redirects are not synchronous promises
-      // Do NOT show success/error states before redirect completes
-      const options = createFacebookLinkIdentityOptions('https://postinet.pro/api/facebook/exchange');
-      await supabase.auth.linkIdentity({
-        provider: 'facebook',
-        options
-      });
-      // Note: If linkIdentity succeeds, the browser will redirect to Facebook
-      // The redirect flow handles everything - no error handling needed here
+      try {
+        const response = await fetch("/api/facebook/auth-url", { method: "GET" });
+        if (!response.ok) {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const body = await response.json();
+            throw new Error(body.error || `Failed to get ${platform} OAuth URL.`);
+          }
+          throw new Error(`Server error (${response.status}): ${response.statusText || "Failed to connect"}`);
+        }
+
+        const { url } = await response.json();
+        if (!url) throw new Error("No OAuth URL received from server.");
+        window.location.href = url;
+      } catch (err: unknown) {
+        console.error(err);
+        const message = err instanceof Error ? err.message : "Failed to start OAuth.";
+        setError(message);
+        setActionLoading(null);
+      }
       return;
     }
 

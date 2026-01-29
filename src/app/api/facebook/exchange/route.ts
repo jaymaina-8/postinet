@@ -1,53 +1,158 @@
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
+import supabaseAdmin from '@/lib/supabaseAdmin';
+import { PLATFORMS } from '@/lib/platforms';
+import {
+  exchangeFacebookCode,
+  getFacebookPages,
+  getFacebookProfile,
+  getLongLivedToken,
+  validateFacebookEnv,
+} from '@/lib/facebook/oauth';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
-/**
- * GET: Handle Facebook OAuth callback for Supabase linkIdentity flow
- * 
- * This route completes the PKCE OAuth flow by calling exchangeCodeForSession.
- * It is used when linking Facebook as an identity to an existing user account.
- * 
- * IMPORTANT: This is an identity-linking flow, NOT a login flow.
- * - Do NOT check auth state before exchange
- * - Do NOT use signInWithOAuth
- * - Always call exchangeCodeForSession unconditionally
- */
 export async function GET(req: NextRequest) {
-  const cookieStore = await cookies();
-  
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('[FB_OAUTH] Missing Supabase environment variables');
-    return NextResponse.redirect('https://postinet.pro/dashboard?error=facebook_oauth');
-  }
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin;
+    const { searchParams } = new URL(req.url);
+    const code = searchParams.get('code');
+    const error = searchParams.get('error');
+    const errorDescription = searchParams.get('error_description');
 
-  // Create Supabase client with cookie handling for the response
-  // Redirect to /dashboard on success (accounts page will show success based on linked identity)
-  const successUrl = 'https://postinet.pro/dashboard';
-  const response = NextResponse.redirect(successUrl);
-  
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll: () => cookieStore.getAll().map(({ name, value }) => ({ name, value })),
-      setAll: (cookiesToSet) => {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
+    if (error) {
+      console.error('Facebook OAuth error:', { error, errorDescription });
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('facebook_error', errorDescription || error);
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    if (!code) {
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('facebook_error', 'Missing authorization code');
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    try {
+      validateFacebookEnv();
+    } catch (envError: any) {
+      console.error('Facebook OAuth environment validation failed:', envError);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('facebook_error', 'Server configuration error');
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    let redirectUri = process.env.FACEBOOK_REDIRECT_URI?.trim();
+    if (!redirectUri) {
+      redirectUri = `${appUrl}/api/facebook/exchange`;
+      console.warn('FACEBOOK_REDIRECT_URI not set, using fallback:', redirectUri);
+    }
+
+    let tokenResponse = await exchangeFacebookCode(code, redirectUri);
+    try {
+      tokenResponse = await getLongLivedToken(tokenResponse.access_token);
+    } catch (tokenError) {
+      console.warn('Failed to upgrade Facebook token to long-lived token:', tokenError);
+    }
+
+    const userAccessToken = tokenResponse.access_token;
+    const expiresAt = tokenResponse.expires_in
+      ? Date.now() + tokenResponse.expires_in * 1000
+      : null;
+
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('facebook_error', 'User authentication required. Please log in again.');
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    let platformUserId: string | null = null;
+    let platformUsername: string | null = null;
+    try {
+      const profileData = await getFacebookProfile(userAccessToken);
+      platformUserId = profileData.id || null;
+      platformUsername = profileData.name || null;
+    } catch (profileError) {
+      console.warn('Failed to fetch Facebook profile:', profileError);
+    }
+
+    let pages;
+    try {
+      pages = await getFacebookPages(userAccessToken);
+    } catch (pagesError) {
+      console.error('Failed to fetch Facebook Pages:', pagesError);
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('facebook_error', 'Failed to fetch Facebook Pages. Please try again.');
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    if (!pages?.length) {
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set(
+        'facebook_error',
+        'No Facebook Pages found. Please create a Page and try again.'
+      );
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    const selectedPage = pages[0];
+    if (!selectedPage.access_token) {
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('facebook_error', 'Facebook Page token missing. Please try again.');
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    const { data: existingConnection } = await supabaseAdmin
+      .from('connected_accounts')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('platform', PLATFORMS.FACEBOOK)
+      .single();
+
+    const connectionPayload = {
+      access_token: userAccessToken,
+      refresh_token: null,
+      expires_at: expiresAt,
+      platform_user_id: platformUserId,
+      platform_username: platformUsername,
+      facebook_page_id: selectedPage.id,
+      facebook_page_name: selectedPage.name,
+      facebook_page_access_token: selectedPage.access_token,
+    };
+
+    if (existingConnection) {
+      const { error: updateError } = await supabaseAdmin
+        .from('connected_accounts')
+        .update(connectionPayload)
+        .eq('id', existingConnection.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+    } else {
+      const { error: insertError } = await supabaseAdmin
+        .from('connected_accounts')
+        .insert({
+          user_id: user.id,
+          platform: PLATFORMS.FACEBOOK,
+          ...connectionPayload,
         });
-      },
-    },
-  });
 
-  // Exchange the authorization code for a session
-  // This MUST be called unconditionally - do NOT check auth state first
-  const { error } = await supabase.auth.exchangeCodeForSession(req.url);
+      if (insertError) {
+        throw insertError;
+      }
+    }
 
-  if (error) {
+    const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+    dashboardUrl.searchParams.set('facebook', 'connected');
+    return NextResponse.redirect(dashboardUrl);
+  } catch (error: any) {
     console.error('Facebook OAuth exchange error:', error);
-    return NextResponse.redirect('https://postinet.pro/dashboard?error=facebook_oauth');
+    const dashboardUrl = new URL('/dashboard/accounts', process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin);
+    dashboardUrl.searchParams.set('facebook_error', error.message || 'Failed to complete Facebook OAuth');
+    return NextResponse.redirect(dashboardUrl);
   }
-
-  return response;
 }
