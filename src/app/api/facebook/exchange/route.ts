@@ -112,24 +112,42 @@ export async function GET(req: NextRequest) {
       .eq('platform', PLATFORMS.FACEBOOK)
       .single();
 
-    const connectionPayload = {
+    const connectionPayloadBase = {
       access_token: userAccessToken,
       refresh_token: null,
       expires_at: expiresAt,
-      platform_user_id: platformUserId,
       platform_username: platformUsername,
       facebook_page_id: selectedPage.id,
       facebook_page_name: selectedPage.name,
       facebook_page_access_token: selectedPage.access_token,
     };
 
+    const connectionPayloadWithUserId = {
+      ...connectionPayloadBase,
+      platform_user_id: platformUserId,
+    };
+
+    const isMissingPlatformUserIdColumn = (message: string | undefined) =>
+      !!message &&
+      (message.includes("platform_user_id") ||
+        message.includes("schema cache") ||
+        message.toLowerCase().includes("does not exist"));
+
     if (existingConnection) {
       const { error: updateError } = await supabaseAdmin
         .from('connected_accounts')
-        .update(connectionPayload)
+        .update(connectionPayloadWithUserId)
         .eq('id', existingConnection.id);
 
-      if (updateError) {
+      if (updateError && isMissingPlatformUserIdColumn(updateError.message)) {
+        const { error: retryError } = await supabaseAdmin
+          .from('connected_accounts')
+          .update(connectionPayloadBase)
+          .eq('id', existingConnection.id);
+        if (retryError) {
+          throw retryError;
+        }
+      } else if (updateError) {
         throw updateError;
       }
     } else {
@@ -138,10 +156,21 @@ export async function GET(req: NextRequest) {
         .insert({
           user_id: user.id,
           platform: PLATFORMS.FACEBOOK,
-          ...connectionPayload,
+          ...connectionPayloadWithUserId,
         });
 
-      if (insertError) {
+      if (insertError && isMissingPlatformUserIdColumn(insertError.message)) {
+        const { error: retryError } = await supabaseAdmin
+          .from('connected_accounts')
+          .insert({
+            user_id: user.id,
+            platform: PLATFORMS.FACEBOOK,
+            ...connectionPayloadBase,
+          });
+        if (retryError) {
+          throw retryError;
+        }
+      } else if (insertError) {
         throw insertError;
       }
     }
