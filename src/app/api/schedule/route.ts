@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { postId, scheduledAt, platform = PLATFORMS.INSTAGRAM } = body;
+    const { postId, scheduledAt, platform = PLATFORMS.FACEBOOK } = body;
 
     if (!postId || !scheduledAt) {
       return NextResponse.json(
@@ -72,11 +72,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate scheduledAt is in the future
+    // Validate scheduledAt is valid and in the future
     const scheduledDate = new Date(scheduledAt);
+    if (Number.isNaN(scheduledDate.getTime())) {
+      return NextResponse.json(
+        { error: 'scheduledAt must be a valid timestamp' },
+        { status: 400 }
+      );
+    }
+
+    const scheduledAtUtc = scheduledDate.toISOString();
     if (scheduledDate <= new Date()) {
       return NextResponse.json(
         { error: 'Scheduled time must be in the future' },
+        { status: 400 }
+      );
+    }
+
+    if (platform !== PLATFORMS.FACEBOOK) {
+      return NextResponse.json(
+        { error: 'Only Facebook scheduling is supported at this time' },
         { status: 400 }
       );
     }
@@ -96,10 +111,44 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Update post with scheduled_at
+    // Ensure Facebook Page is connected and capture Page ID
+    const { data: connection, error: connectionError } = await supabaseAdmin
+      .from('connected_accounts')
+      .select('facebook_page_id, facebook_page_access_token, expires_at')
+      .eq('user_id', user.id)
+      .eq('platform', PLATFORMS.FACEBOOK)
+      .single();
+
+    if (connectionError || !connection) {
+      return NextResponse.json(
+        { error: 'Facebook Page connection required to schedule posts' },
+        { status: 400 }
+      );
+    }
+
+    if (!connection.facebook_page_id || !connection.facebook_page_access_token) {
+      return NextResponse.json(
+        { error: 'Facebook Page token missing. Please reconnect your account.' },
+        { status: 400 }
+      );
+    }
+
+    if (connection.expires_at && connection.expires_at < Date.now()) {
+      return NextResponse.json(
+        { error: 'Facebook access token expired. Please reconnect your account.' },
+        { status: 400 }
+      );
+    }
+
+    // Update post with scheduled_at and platform details
     await supabaseAdmin
       .from('posts')
-      .update({ scheduled_at: scheduledAt })
+      .update({
+        scheduled_at: scheduledAtUtc,
+        platform: PLATFORMS.FACEBOOK,
+        platform_account_id: connection.facebook_page_id,
+        status: 'scheduled',
+      })
       .eq('id', postId);
 
     // Create scheduled post entry
@@ -108,9 +157,10 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id: user.id,
         post_id: postId,
-        scheduled_at: scheduledAt,
-        status: 'pending',
-        platform,
+        scheduled_at: scheduledAtUtc,
+        status: 'scheduled',
+        platform: PLATFORMS.FACEBOOK,
+        platform_account_id: connection.facebook_page_id,
       })
       .select()
       .single();
@@ -174,7 +224,7 @@ export async function DELETE(req: NextRequest) {
     if (data.post_id) {
       await supabaseAdmin
         .from('posts')
-        .update({ scheduled_at: null })
+        .update({ scheduled_at: null, status: 'draft' })
         .eq('id', data.post_id);
     }
 

@@ -10,6 +10,12 @@
     "src/app/api/youtube/exchange/route.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/publish-scheduled",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }
 

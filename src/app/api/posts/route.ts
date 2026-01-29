@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get('status'); // 'draft', 'scheduled', 'posted'
+    const status = searchParams.get('status'); // 'draft', 'scheduled', 'published'
 
     let query = supabaseAdmin
       .from('posts')
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       query = query.is('posted_at', null).is('scheduled_at', null);
     } else if (status === 'scheduled') {
       query = query.not('scheduled_at', 'is', null).is('posted_at', null);
-    } else if (status === 'posted') {
+    } else if (status === 'published' || status === 'posted') {
       query = query.not('posted_at', 'is', null);
     }
 
@@ -41,9 +41,9 @@ export async function GET(req: NextRequest) {
     const postsWithStatus = posts?.map(post => {
       let postStatus = 'draft';
       if (post.posted_at) {
-        postStatus = 'posted';
+        postStatus = 'published';
       } else if (post.scheduled_at) {
-        postStatus = 'pending';
+        postStatus = 'scheduled';
       }
 
       return {

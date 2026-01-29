@@ -15,13 +15,13 @@ interface Post {
   platform_post_id: string | null;
   metrics: any;
   created_at: string;
-  status: 'draft' | 'pending' | 'posted';
+  status: 'draft' | 'scheduled' | 'published';
 }
 
 export default function HistoryPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'draft' | 'pending' | 'posted'>('all');
+  const [filter, setFilter] = useState<'all' | 'draft' | 'scheduled' | 'published'>('all');
 
   useEffect(() => {
     fetchPosts();
@@ -44,9 +44,9 @@ export default function HistoryPage() {
       // Apply filter
       if (filter === 'draft') {
         query = query.is('posted_at', null).is('scheduled_at', null);
-      } else if (filter === 'pending') {
+      } else if (filter === 'scheduled') {
         query = query.not('scheduled_at', 'is', null).is('posted_at', null);
-      } else if (filter === 'posted') {
+      } else if (filter === 'published') {
         query = query.not('posted_at', 'is', null);
       }
 
@@ -70,11 +70,11 @@ export default function HistoryPage() {
         }));
         
         const postsWithStatus = postsWithDefaults.map(post => {
-          let status: 'draft' | 'pending' | 'posted' = 'draft';
+          let status: 'draft' | 'scheduled' | 'published' = 'draft';
           if (post.posted_at) {
-            status = 'posted';
+            status = 'published';
           } else if (post.scheduled_at) {
-            status = 'pending';
+            status = 'scheduled';
           }
           return { ...post, status };
         });
@@ -89,11 +89,11 @@ export default function HistoryPage() {
 
       // Add status to each post
       const postsWithStatus = (data || []).map(post => {
-        let status: 'draft' | 'pending' | 'posted' = 'draft';
+        let status: 'draft' | 'scheduled' | 'published' = 'draft';
         if (post.posted_at) {
-          status = 'posted';
+          status = 'published';
         } else if (post.scheduled_at) {
-          status = 'pending';
+          status = 'scheduled';
         }
 
         return {
@@ -120,8 +120,8 @@ export default function HistoryPage() {
   function getStatusBadge(status: string) {
     const styles = {
       draft: 'bg-zinc-200 text-zinc-700',
-      pending: 'bg-yellow-100 text-yellow-700',
-      posted: 'bg-green-100 text-green-700',
+      scheduled: 'bg-yellow-100 text-yellow-700',
+      published: 'bg-green-100 text-green-700',
     };
 
     return (
@@ -161,9 +161,9 @@ export default function HistoryPage() {
           Drafts
         </button>
         <button
-          onClick={() => setFilter('pending')}
+          onClick={() => setFilter('scheduled')}
           className={`px-4 py-2 rounded text-sm font-medium ${
-            filter === 'pending'
+            filter === 'scheduled'
               ? 'bg-zinc-900 text-white'
               : 'bg-white text-zinc-700 border border-zinc-300'
           }`}
@@ -171,14 +171,14 @@ export default function HistoryPage() {
           Scheduled
         </button>
         <button
-          onClick={() => setFilter('posted')}
+          onClick={() => setFilter('published')}
           className={`px-4 py-2 rounded text-sm font-medium ${
-            filter === 'posted'
+            filter === 'published'
               ? 'bg-zinc-900 text-white'
               : 'bg-white text-zinc-700 border border-zinc-300'
           }`}
         >
-          Posted
+          Published
         </button>
       </div>
 
@@ -215,7 +215,7 @@ export default function HistoryPage() {
                     )}
                     {post.posted_at && (
                       <span className="text-sm text-zinc-500">
-                        Posted: {formatDate(post.posted_at)}
+                        Published: {formatDate(post.posted_at)}
                       </span>
                     )}
                   </div>

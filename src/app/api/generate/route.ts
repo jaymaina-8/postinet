@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const text = body.text as string;
-    const platform = (body.platform as string) || PLATFORMS.INSTAGRAM;
+    const platform = (body.platform as string) || PLATFORMS.FACEBOOK;
     const media_url = body.media_url as string | null;
 
     if (!text || text.trim().length === 0) {
@@ -78,6 +78,9 @@ export async function POST(req: NextRequest) {
         media_url: media_url || null,
         ai_caption: generated.caption,
         ai_hashtags: generated.hashtags.join(', '),
+        platform,
+        platform_account_id: null,
+        status: 'draft',
         scheduled_at: null,
         posted_at: null,
       })

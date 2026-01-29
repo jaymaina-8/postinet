@@ -21,6 +21,7 @@ interface ScheduledPost {
   scheduled_at: string;
   status: string;
   platform: string;
+  error_message?: string | null;
   posts: Post;
 }
 
@@ -29,7 +30,7 @@ export default function SchedulePage() {
   const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [selectedPlatform, setSelectedPlatform] = useState<string>(PLATFORMS.INSTAGRAM);
+  const [selectedPlatform, setSelectedPlatform] = useState<string>(PLATFORMS.FACEBOOK);
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const [scheduling, setScheduling] = useState(false);
@@ -143,7 +144,7 @@ export default function SchedulePage() {
         body: JSON.stringify({
           postId: selectedPost.id,
           scheduledAt,
-          platform: selectedPlatform || 'instagram',
+          platform: selectedPlatform || 'facebook',
         }),
       });
 
@@ -202,15 +203,15 @@ export default function SchedulePage() {
 
   function getStatusBadge(status: string) {
     const styles = {
-      pending: 'bg-yellow-100 text-yellow-700',
-      posted: 'bg-green-100 text-green-700',
+      scheduled: 'bg-yellow-100 text-yellow-700',
+      published: 'bg-green-100 text-green-700',
       failed: 'bg-red-100 text-red-700',
       cancelled: 'bg-zinc-100 text-zinc-700',
     };
 
     return (
-      <span className={`px-2 py-1 rounded text-xs font-medium ${styles[status as keyof typeof styles] || styles.pending}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <span className={`px-2 py-1 rounded text-xs font-medium ${styles[status as keyof typeof styles] || styles.scheduled}`}>
+        {(status || 'scheduled').charAt(0).toUpperCase() + (status || 'scheduled').slice(1)}
       </span>
     );
   }
@@ -288,7 +289,7 @@ export default function SchedulePage() {
                   onChange={(e) => setSelectedPlatform(e.target.value)}
                   className="w-full border border-zinc-300 rounded-lg px-3 py-2"
                 >
-                  {PLATFORM_LIST.map((p) => (
+                  {PLATFORM_LIST.filter((p) => p.value === PLATFORMS.FACEBOOK).map((p) => (
                     <option value={p.value} key={p.value}>{p.label}</option>
                   ))}
                 </select>
@@ -349,13 +350,13 @@ export default function SchedulePage() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      {getStatusBadge(scheduledPost.status)}
+                      {getStatusBadge(scheduledPost.status === 'pending' ? 'scheduled' : scheduledPost.status)}
                       <span className="text-sm text-zinc-500">
                         Scheduled: {formatDate(scheduledPost.scheduled_at)}
                       </span>
                     </div>
                   </div>
-                  {scheduledPost.status === 'pending' && (
+                  {scheduledPost.status === 'scheduled' && (
                     <button
                       onClick={() => handleCancelSchedule(scheduledPost.id)}
                       className="text-sm text-red-600 hover:underline"
@@ -381,6 +382,11 @@ export default function SchedulePage() {
                     </p>
                     {scheduledPost.posts.ai_hashtags && (
                       <p className="text-zinc-600 text-sm">{scheduledPost.posts.ai_hashtags}</p>
+                    )}
+                    {scheduledPost.status === 'failed' && (
+                      <p className="text-sm text-red-600 mt-2">
+                        {scheduledPost.error_message || 'Failed to publish. Please review your Facebook connection and try again.'}
+                      </p>
                     )}
                   </div>
                 )}
