@@ -2,11 +2,10 @@
 
 import React, { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
-import { cn } from "../../lib/utils";
 import { Button } from "../../components/ui/button";
 import supabase from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
+import { PageScopeIndicator, PageScopeProvider } from "@/components/PageScope";
 
 const sidebarLinks = [
   { href: "/dashboard", label: "Home" },
@@ -20,7 +19,7 @@ const sidebarLinks = [
 function Sidebar() {
   return (
     <aside className="bg-zinc-50 border-r w-56 min-h-screen px-4 py-8 flex flex-col gap-8">
-      <div className="font-bold text-xl text-zinc-800 mb-8">POSTINET AI</div>
+      <div className="font-bold text-xl text-zinc-800 mb-8">POSTINET</div>
       <nav className="flex flex-col gap-3">
         {sidebarLinks.map(link => (
           <Button variant="ghost" className="justify-start" asChild key={link.href}>
@@ -157,12 +156,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-h-0">
-        <Navbar />
-        <main className="flex-1 min-h-0 bg-zinc-100 p-4 overflow-auto">{children}</main>
+    <PageScopeProvider>
+      <div className="flex h-screen">
+        <Sidebar />
+        <div className="flex-1 flex flex-col min-h-0">
+          <Navbar />
+          <main className="flex-1 min-h-0 bg-zinc-100 p-4 overflow-auto">
+            <PageScopeIndicator />
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </PageScopeProvider>
   );
 }

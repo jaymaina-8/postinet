@@ -240,7 +240,7 @@ export default function ConnectFacebookCard() {
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-zinc-600">
-              Connect your Facebook Page to start publishing content with AI-generated captions.
+              Connect your Facebook Page to start publishing content.
             </p>
             <Button onClick={handleConnect} disabled={actionLoading}>
               {actionLoading ? "Redirecting..." : "Connect Facebook"}

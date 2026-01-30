@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import supabase from '@/lib/supabaseClient';
 import { formatError } from '@/lib/utils';
+import { PageGate, usePageScope } from '@/components/PageScope';
 
 interface Post {
   id: string;
@@ -15,17 +16,20 @@ interface Post {
   platform_post_id: string | null;
   metrics: any;
   created_at: string;
-  status: 'draft' | 'scheduled' | 'published';
+  status: 'draft' | 'scheduled' | 'published' | 'failed';
 }
 
 export default function HistoryPage() {
+  const { selectedPage } = usePageScope();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'draft' | 'scheduled' | 'published'>('all');
+  const [filter, setFilter] = useState<'all' | 'draft' | 'scheduled' | 'published' | 'failed'>('all');
 
   useEffect(() => {
-    fetchPosts();
-  }, [filter]);
+    if (selectedPage) {
+      fetchPosts();
+    }
+  }, [filter, selectedPage]);
 
   async function fetchPosts() {
     try {
@@ -41,6 +45,10 @@ export default function HistoryPage() {
         .select('*')
         .order('created_at', { ascending: false });
 
+      if (selectedPage?.pageId) {
+        query = query.eq('platform_account_id', selectedPage.pageId);
+      }
+
       // Apply filter
       if (filter === 'draft') {
         query = query.is('posted_at', null).is('scheduled_at', null);
@@ -48,6 +56,8 @@ export default function HistoryPage() {
         query = query.not('scheduled_at', 'is', null).is('posted_at', null);
       } else if (filter === 'published') {
         query = query.not('posted_at', 'is', null);
+      } else if (filter === 'failed') {
+        query = query.eq('status', 'failed');
       }
 
       const { data, error } = await query;
@@ -63,15 +73,22 @@ export default function HistoryPage() {
         if (allError) throw allError;
         
         // Add default values for missing columns
-        const postsWithDefaults = (allData || []).map(post => ({
-          ...post,
-          scheduled_at: post.scheduled_at || null,
-          posted_at: post.posted_at || null,
-        }));
+        const postsWithDefaults = (allData || [])
+          .filter((post) => {
+            if (!selectedPage?.pageId) return true;
+            return post.platform_account_id === selectedPage.pageId;
+          })
+          .map(post => ({
+            ...post,
+            scheduled_at: post.scheduled_at || null,
+            posted_at: post.posted_at || null,
+          }));
         
         const postsWithStatus = postsWithDefaults.map(post => {
-          let status: 'draft' | 'scheduled' | 'published' = 'draft';
-          if (post.posted_at) {
+          let status: 'draft' | 'scheduled' | 'published' | 'failed' = 'draft';
+          if (post.status === 'failed') {
+            status = 'failed';
+          } else if (post.posted_at) {
             status = 'published';
           } else if (post.scheduled_at) {
             status = 'scheduled';
@@ -89,8 +106,10 @@ export default function HistoryPage() {
 
       // Add status to each post
       const postsWithStatus = (data || []).map(post => {
-        let status: 'draft' | 'scheduled' | 'published' = 'draft';
-        if (post.posted_at) {
+        let status: 'draft' | 'scheduled' | 'published' | 'failed' = 'draft';
+        if (post.status === 'failed') {
+          status = 'failed';
+        } else if (post.posted_at) {
           status = 'published';
         } else if (post.scheduled_at) {
           status = 'scheduled';
@@ -118,11 +137,12 @@ export default function HistoryPage() {
   }
 
   function getStatusBadge(status: string) {
-    const styles = {
-      draft: 'bg-zinc-200 text-zinc-700',
-      scheduled: 'bg-yellow-100 text-yellow-700',
-      published: 'bg-green-100 text-green-700',
-    };
+      const styles = {
+        draft: 'bg-zinc-200 text-zinc-700',
+        scheduled: 'bg-yellow-100 text-yellow-700',
+        published: 'bg-green-100 text-green-700',
+        failed: 'bg-red-100 text-red-700',
+      };
 
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium ${styles[status as keyof typeof styles] || styles.draft}`}>
@@ -132,11 +152,12 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-zinc-900 mb-2">Content History</h1>
-        <p className="text-zinc-600">View and manage your generated content</p>
-      </div>
+    <PageGate>
+      <div className="max-w-6xl mx-auto py-8">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-zinc-900 mb-2">Content History</h1>
+          <p className="text-zinc-600">View your drafts, scheduled posts, and published content</p>
+        </div>
 
       {/* Filters */}
       <div className="mb-6 flex gap-2">
@@ -179,6 +200,16 @@ export default function HistoryPage() {
           }`}
         >
           Published
+        </button>
+        <button
+          onClick={() => setFilter('failed')}
+          className={`px-4 py-2 rounded text-sm font-medium ${
+            filter === 'failed'
+              ? 'bg-zinc-900 text-white'
+              : 'bg-white text-zinc-700 border border-zinc-300'
+          }`}
+        >
+          Failed
         </button>
       </div>
 
@@ -233,23 +264,9 @@ export default function HistoryPage() {
               )}
 
               <div className="mb-3">
-                <h3 className="font-semibold text-zinc-900 mb-1">Original Content:</h3>
+                <h3 className="font-semibold text-zinc-900 mb-1">Post Content</h3>
                 <p className="text-zinc-700 whitespace-pre-wrap">{post.content || 'N/A'}</p>
               </div>
-
-              {post.ai_caption && (
-                <div className="mb-3">
-                  <h3 className="font-semibold text-zinc-900 mb-1">AI Caption:</h3>
-                  <p className="text-zinc-700">{post.ai_caption}</p>
-                </div>
-              )}
-
-              {post.ai_hashtags && (
-                <div className="mb-3">
-                  <h3 className="font-semibold text-zinc-900 mb-1">Hashtags:</h3>
-                  <p className="text-zinc-600">{post.ai_hashtags}</p>
-                </div>
-              )}
 
               {post.platform_post_id && (
                 <div className="mt-4 pt-4 border-t border-zinc-200">
@@ -262,6 +279,7 @@ export default function HistoryPage() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </PageGate>
   );
 }

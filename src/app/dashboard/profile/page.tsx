@@ -178,7 +178,7 @@ export default function ProfilePage() {
         <CardHeader>
           <CardTitle>Content Preferences</CardTitle>
           <p className="text-sm text-zinc-500">
-            These preferences help our AI generate better content tailored to your brand.
+            These preferences help personalize your content settings.
           </p>
         </CardHeader>
         <CardContent>

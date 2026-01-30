@@ -130,17 +130,17 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-3xl font-bold text-zinc-900 mb-2">Welcome to Postinet</h1>
         <p className="text-zinc-600">
-          Your AI-powered social media command center. Let&apos;s get you publishing!
+          Your social media command center. Let&apos;s get you publishing!
         </p>
       </div>
 
       {/* Guided Steps */}
       {!loading && currentStep < 4 && (
-        <Card className="border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-cyan-50">
+        <Card className="border-2 border-emerald-200 bg-linear-to-br from-emerald-50 to-cyan-50">
         <CardHeader>
             <CardTitle className="text-emerald-800">
               {currentStep === 1 && "Step 1: Connect Your Social Accounts"}
-              {currentStep === 2 && "Step 2: Generate Your First Post"}
+              {currentStep === 2 && "Step 2: Create Your First Post"}
               {currentStep === 3 && "Step 3: Publish or Schedule Your Content"}
             </CardTitle>
         </CardHeader>
@@ -148,7 +148,7 @@ export default function DashboardPage() {
             {currentStep === 1 && (
               <div className="space-y-4">
                 <p className="text-zinc-700">
-                  Connect your Facebook Page or YouTube channel to start publishing AI-generated content.
+                  Connect your Facebook Page or YouTube channel to start publishing content.
                 </p>
                 <Link
                   href="/dashboard/accounts"
@@ -165,7 +165,7 @@ export default function DashboardPage() {
             {currentStep === 2 && (
               <div className="space-y-4">
                 <p className="text-zinc-700">
-                  Great! Your accounts are connected. Now let&apos;s create your first AI-powered post.
+                  Great! Your accounts are connected. Now let&apos;s create your first post.
                 </p>
                 <Link
                   href="/dashboard/generate"
@@ -174,7 +174,7 @@ export default function DashboardPage() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  Generate Content
+                  Create Post
                 </Link>
               </div>
             )}
@@ -307,8 +307,8 @@ export default function DashboardPage() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-zinc-900">Generate Content</h3>
-                    <p className="text-sm text-zinc-500 mt-1">Create AI-powered posts and captions</p>
+                    <h3 className="font-semibold text-zinc-900">Create Post</h3>
+                    <p className="text-sm text-zinc-500 mt-1">Create and schedule new content</p>
                   </div>
                 </div>
               </CardContent>

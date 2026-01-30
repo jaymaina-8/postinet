@@ -172,7 +172,7 @@ export default function ConnectYouTubeCard() {
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-zinc-600">
-              Link your YouTube account to unlock AI drafting and one-click posting.
+              Link your YouTube account to unlock publishing and scheduling.
             </p>
             <Button onClick={handleConnect} disabled={actionLoading}>
               {actionLoading ? "Redirecting..." : "Connect YouTube"}
