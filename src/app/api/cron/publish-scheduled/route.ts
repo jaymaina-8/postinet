@@ -3,8 +3,19 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
 import { postToFacebook } from '@/lib/facebook/postToFacebook';
 
+function getAuthorizationHeader(request: Request) {
+  const directHeader = request.headers.get('Authorization');
+  if (directHeader) {
+    return directHeader;
+  }
+  const fallbackHeader = Array.from(request.headers.entries()).find(
+    ([key]) => key.toLowerCase() === 'authorization'
+  )?.[1];
+  return fallbackHeader || null;
+}
+
 function isAuthorized(request: Request) {
-  const authHeader = request.headers.get('authorization');
+  const authHeader = getAuthorizationHeader(request);
   const secret = process.env.CRON_SECRET;
   if (!secret || authHeader !== `Bearer ${secret}`) {
     return false;
