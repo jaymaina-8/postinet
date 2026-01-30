@@ -3,7 +3,20 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
 import { postToFacebook } from '@/lib/facebook/postToFacebook';
 
-export async function GET() {
+function isAuthorized(request: Request) {
+  const authHeader = request.headers.get('authorization');
+  const secret = process.env.CRON_SECRET;
+  if (!secret || authHeader !== `Bearer ${secret}`) {
+    return false;
+  }
+  return true;
+}
+
+async function handleScheduledPublish(request: Request) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const now = new Date();
   const nowIso = now.toISOString();
 
@@ -154,4 +167,12 @@ export async function GET() {
       { status: 500 }
     );
   }
+}
+
+export async function GET(request: Request) {
+  return handleScheduledPublish(request);
+}
+
+export async function POST(request: Request) {
+  return handleScheduledPublish(request);
 }
