@@ -55,11 +55,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { postId, scheduledAt, platform = PLATFORMS.FACEBOOK } = body;
+    const scheduledAtInput = body.scheduled_at ?? body.scheduledAt;
+    const { postId, platform = PLATFORMS.FACEBOOK } = body;
 
-    if (!postId || !scheduledAt) {
+    if (!postId || !scheduledAtInput) {
       return NextResponse.json(
-        { error: 'postId and scheduledAt are required' },
+        { error: 'postId and scheduled_at are required' },
         { status: 400 }
       );
     }
@@ -73,10 +74,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate scheduledAt is valid and in the future
-    const scheduledDate = new Date(scheduledAt);
+    const scheduledDate = new Date(scheduledAtInput);
     if (Number.isNaN(scheduledDate.getTime())) {
       return NextResponse.json(
-        { error: 'scheduledAt must be a valid timestamp' },
+        { error: 'scheduled_at must be a valid timestamp' },
         { status: 400 }
       );
     }
@@ -141,17 +142,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Update post with scheduled_at and platform details
-    await supabaseAdmin
-      .from('posts')
-      .update({
-        scheduled_at: scheduledAtUtc,
-        platform: PLATFORMS.FACEBOOK,
-        platform_account_id: connection.facebook_page_id,
-        status: 'scheduled',
-      })
-      .eq('id', postId);
-
-    // Create scheduled post entry
+    // Create scheduled post entry first to avoid partial inserts on failure
     const { data: scheduledPost, error: scheduleError } = await supabaseAdmin
       .from('scheduled_posts')
       .insert({
@@ -166,7 +157,33 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (scheduleError) {
-      throw scheduleError;
+      return NextResponse.json(
+        { error: scheduleError.message || 'Failed to schedule post' },
+        { status: 400 }
+      );
+    }
+
+    const { error: postUpdateError } = await supabaseAdmin
+      .from('posts')
+      .update({
+        scheduled_at: scheduledAtUtc,
+        platform: PLATFORMS.FACEBOOK,
+        platform_account_id: connection.facebook_page_id,
+        status: 'scheduled',
+      })
+      .eq('id', postId);
+
+    if (postUpdateError) {
+      if (scheduledPost?.id) {
+        await supabaseAdmin
+          .from('scheduled_posts')
+          .delete()
+          .eq('id', scheduledPost.id);
+      }
+      return NextResponse.json(
+        { error: postUpdateError.message || 'Failed to schedule post' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ scheduledPost });
