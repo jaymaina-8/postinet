@@ -123,7 +123,9 @@ async function handleScheduledPublish(request: Request) {
         continue;
       }
 
-      const post = scheduledPost.posts;
+      const post = Array.isArray(scheduledPost.posts)
+        ? scheduledPost.posts[0]
+        : scheduledPost.posts;
       const messageBase = post?.ai_caption || post?.content || '';
       const hashtags = post?.ai_hashtags ? `\n\n${post.ai_hashtags}` : '';
       const message = `${messageBase}${hashtags}`.trim();
