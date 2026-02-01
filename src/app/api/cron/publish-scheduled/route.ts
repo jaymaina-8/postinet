@@ -181,6 +181,8 @@ async function handleScheduledPublish(request: Request) {
           .update({
             status: 'published',
             error_message: null,
+            published_once: true,
+            published_at: nowIso,
             updated_at: nowIso,
           })
           .eq('id', scheduledPost.id);
