@@ -4,7 +4,7 @@ alter table scheduled_posts
 
 alter table scheduled_posts
   add constraint scheduled_posts_status_check
-  check (status in ('draft', 'scheduled', 'publishing', 'published', 'failed'));
+  check (status in ('scheduled', 'publishing', 'published', 'cancelled', 'failed'));
 
 alter table posts
   drop constraint if exists posts_status_check;

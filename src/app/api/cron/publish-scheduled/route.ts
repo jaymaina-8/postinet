@@ -42,18 +42,18 @@ async function handleScheduledPublish(request: Request) {
         scheduled_at,
         platform,
         platform_account_id,
+        published_once,
         posts (
           id,
           content,
           media_url,
           ai_caption,
-          ai_hashtags,
-          published_once,
-          status
+          ai_hashtags
         )
       `
       )
       .eq('status', 'scheduled')
+      .eq('published_once', false)
       .lte('scheduled_at', nowIso)
       .order('scheduled_at', { ascending: true });
 
@@ -84,12 +84,14 @@ async function handleScheduledPublish(request: Request) {
         ? scheduledPost.posts[0]
         : scheduledPost.posts;
 
-      if (post?.published_once) {
+      if (scheduledPost.published_once) {
         await supabaseAdmin
           .from('scheduled_posts')
           .update({
             status: 'published',
             error_message: null,
+            published_once: true,
+            published_at: nowIso,
             updated_at: nowIso,
           })
           .eq('id', scheduledPost.id);
@@ -142,12 +144,15 @@ async function handleScheduledPublish(request: Request) {
       }
 
       const { data: claimedPost, error: claimError } = await supabaseAdmin
-        .from('posts')
-        .update({ status: 'publishing' })
-        .eq('id', scheduledPost.post_id)
+        .from('scheduled_posts')
+        .update({
+          status: 'publishing',
+          updated_at: nowIso,
+        })
+        .eq('id', scheduledPost.id)
         .eq('status', 'scheduled')
         .eq('published_once', false)
-        .select('id')
+        .select()
         .single();
 
       if (claimError) {
@@ -157,16 +162,6 @@ async function handleScheduledPublish(request: Request) {
       if (!claimedPost) {
         continue;
       }
-
-      await supabaseAdmin
-        .from('scheduled_posts')
-        .update({
-          status: 'publishing',
-          error_message: null,
-          updated_at: nowIso,
-        })
-        .eq('id', scheduledPost.id)
-        .eq('status', 'scheduled');
 
       const messageBase = post?.ai_caption || post?.content || '';
       const hashtags = post?.ai_hashtags ? `\n\n${post.ai_hashtags}` : '';
