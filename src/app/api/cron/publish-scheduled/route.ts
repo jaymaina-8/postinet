@@ -47,7 +47,9 @@ async function handleScheduledPublish(request: Request) {
           content,
           media_url,
           ai_caption,
-          ai_hashtags
+          ai_hashtags,
+          published_once,
+          status
         )
       `
       )
@@ -72,6 +74,22 @@ async function handleScheduledPublish(request: Request) {
           .update({
             status: 'failed',
             error_message: 'Unsupported platform for scheduled publishing',
+            updated_at: nowIso,
+          })
+          .eq('id', scheduledPost.id);
+        continue;
+      }
+
+      const post = Array.isArray(scheduledPost.posts)
+        ? scheduledPost.posts[0]
+        : scheduledPost.posts;
+
+      if (post?.published_once) {
+        await supabaseAdmin
+          .from('scheduled_posts')
+          .update({
+            status: 'published',
+            error_message: null,
             updated_at: nowIso,
           })
           .eq('id', scheduledPost.id);
@@ -123,9 +141,33 @@ async function handleScheduledPublish(request: Request) {
         continue;
       }
 
-      const post = Array.isArray(scheduledPost.posts)
-        ? scheduledPost.posts[0]
-        : scheduledPost.posts;
+      const { data: claimedPost, error: claimError } = await supabaseAdmin
+        .from('posts')
+        .update({ status: 'publishing' })
+        .eq('id', scheduledPost.post_id)
+        .eq('status', 'scheduled')
+        .eq('published_once', false)
+        .select('id')
+        .single();
+
+      if (claimError) {
+        throw claimError;
+      }
+
+      if (!claimedPost) {
+        continue;
+      }
+
+      await supabaseAdmin
+        .from('scheduled_posts')
+        .update({
+          status: 'publishing',
+          error_message: null,
+          updated_at: nowIso,
+        })
+        .eq('id', scheduledPost.id)
+        .eq('status', 'scheduled');
+
       const messageBase = post?.ai_caption || post?.content || '';
       const hashtags = post?.ai_hashtags ? `\n\n${post.ai_hashtags}` : '';
       const message = `${messageBase}${hashtags}`.trim();
@@ -152,10 +194,12 @@ async function handleScheduledPublish(request: Request) {
           .from('posts')
           .update({
             posted_at: nowIso,
+            published_at: nowIso,
             platform_post_id: postResult.id,
             platform: PLATFORMS.FACEBOOK,
             platform_account_id: pageId,
             status: 'published',
+            published_once: true,
           })
           .eq('id', scheduledPost.post_id);
 
@@ -169,6 +213,11 @@ async function handleScheduledPublish(request: Request) {
             updated_at: nowIso,
           })
           .eq('id', scheduledPost.id);
+
+        await supabaseAdmin
+          .from('posts')
+          .update({ status: 'failed' })
+          .eq('id', scheduledPost.post_id);
       }
     }
 
