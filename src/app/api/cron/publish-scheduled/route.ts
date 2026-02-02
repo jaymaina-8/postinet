@@ -3,33 +3,23 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
 import { postToFacebook } from '@/lib/facebook/postToFacebook';
 
-function getAuthorizationHeader(request: Request) {
-  const directHeader = request.headers.get('Authorization');
-  if (directHeader) {
-    return directHeader;
-  }
-  const fallbackHeader = Array.from(request.headers.entries()).find(
-    ([key]) => key.toLowerCase() === 'authorization'
-  )?.[1];
-  return fallbackHeader || null;
-}
-
+/**
+ * Cron is stateless; scheduling is database-driven.
+ * Exactly-once is enforced via atomic claim + terminal states.
+ * This endpoint is safe to run repeatedly.
+ */
 function isAuthorized(request: Request) {
-  const authHeader = getAuthorizationHeader(request);
+  const authHeader = request.headers.get('Authorization');
   const secret = process.env.CRON_SECRET;
-  if (!secret || authHeader !== `Bearer ${secret}`) {
-    return false;
-  }
-  return true;
+  return Boolean(secret && authHeader === `Bearer ${secret}`);
 }
 
-async function handleScheduledPublish(request: Request) {
+export async function POST(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const now = new Date();
-  const nowIso = now.toISOString();
+  const nowIso = new Date().toISOString();
 
   try {
     const { data: scheduledPosts, error } = await supabaseAdmin
@@ -68,30 +58,29 @@ async function handleScheduledPublish(request: Request) {
     let processed = 0;
 
     for (const scheduledPost of scheduledPosts) {
+      const { data: claimedPost, error: claimError } = await supabaseAdmin
+        .from('scheduled_posts')
+        .update({ status: 'publishing', updated_at: nowIso })
+        .eq('id', scheduledPost.id)
+        .eq('status', 'scheduled')
+        .eq('published_once', false)
+        .select('id')
+        .maybeSingle();
+
+      if (claimError) {
+        throw claimError;
+      }
+
+      if (!claimedPost) {
+        continue;
+      }
+
       if (scheduledPost.platform !== PLATFORMS.FACEBOOK) {
         await supabaseAdmin
           .from('scheduled_posts')
           .update({
             status: 'failed',
             error_message: 'Unsupported platform for scheduled publishing',
-            updated_at: nowIso,
-          })
-          .eq('id', scheduledPost.id);
-        continue;
-      }
-
-      const post = Array.isArray(scheduledPost.posts)
-        ? scheduledPost.posts[0]
-        : scheduledPost.posts;
-
-      if (scheduledPost.published_once) {
-        await supabaseAdmin
-          .from('scheduled_posts')
-          .update({
-            status: 'published',
-            error_message: null,
-            published_once: true,
-            published_at: nowIso,
             updated_at: nowIso,
           })
           .eq('id', scheduledPost.id);
@@ -143,26 +132,9 @@ async function handleScheduledPublish(request: Request) {
         continue;
       }
 
-      const { data: claimedPost, error: claimError } = await supabaseAdmin
-        .from('scheduled_posts')
-        .update({
-          status: 'publishing',
-          updated_at: nowIso,
-        })
-        .eq('id', scheduledPost.id)
-        .eq('status', 'scheduled')
-        .eq('published_once', false)
-        .select()
-        .single();
-
-      if (claimError) {
-        throw claimError;
-      }
-
-      if (!claimedPost) {
-        continue;
-      }
-
+      const post = Array.isArray(scheduledPost.posts)
+        ? scheduledPost.posts[0]
+        : scheduledPost.posts;
       const messageBase = post?.ai_caption || post?.content || '';
       const hashtags = post?.ai_hashtags ? `\n\n${post.ai_hashtags}` : '';
       const message = `${messageBase}${hashtags}`.trim();
@@ -226,12 +198,4 @@ async function handleScheduledPublish(request: Request) {
       { status: 500 }
     );
   }
-}
-
-export async function GET(request: Request) {
-  return handleScheduledPublish(request);
-}
-
-export async function POST(request: Request) {
-  return handleScheduledPublish(request);
 }

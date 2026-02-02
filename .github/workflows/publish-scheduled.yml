@@ -2,7 +2,7 @@ name: Publish Scheduled Posts
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/2 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -11,5 +11,13 @@ jobs:
     steps:
       - name: Call publish-scheduled endpoint
         run: |
-          curl -X POST https://postinet.pro/api/cron/publish-scheduled \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          echo "Calling publish-scheduled cron..."
+          http_code=$(curl -sS -o response.json -w "%{http_code}" -X POST https://postinet.pro/api/cron/publish-scheduled \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          cat response.json
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "Cron succeeded with HTTP $http_code"
+          else
+            echo "Cron failed with HTTP $http_code"
+            exit 1
+          fi

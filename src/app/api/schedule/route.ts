@@ -141,8 +141,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Update post with scheduled_at and platform details
-    // Create scheduled post entry first to avoid partial inserts on failure
+    const nowIso = new Date().toISOString();
+
+    // Create scheduled post entry
     const { data: scheduledPost, error: scheduleError } = await supabaseAdmin
       .from('scheduled_posts')
       .insert({
@@ -150,8 +151,11 @@ export async function POST(req: NextRequest) {
         post_id: postId,
         scheduled_at: scheduledAtUtc,
         status: 'scheduled',
+        published_once: false,
+        published_at: null,
         platform: PLATFORMS.FACEBOOK,
         platform_account_id: connection.facebook_page_id,
+        updated_at: nowIso,
       })
       .select()
       .single();
@@ -170,6 +174,8 @@ export async function POST(req: NextRequest) {
         platform: PLATFORMS.FACEBOOK,
         platform_account_id: connection.facebook_page_id,
         status: 'scheduled',
+        published_once: false,
+        published_at: null,
       })
       .eq('id', postId);
 
@@ -177,7 +183,11 @@ export async function POST(req: NextRequest) {
       if (scheduledPost?.id) {
         await supabaseAdmin
           .from('scheduled_posts')
-          .delete()
+          .update({
+            status: 'failed',
+            error_message: postUpdateError.message || 'Failed to update post',
+            updated_at: nowIso,
+          })
           .eq('id', scheduledPost.id);
       }
       return NextResponse.json(
@@ -217,12 +227,15 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    const nowIso = new Date().toISOString();
+
     // Update status to cancelled
     const { data, error } = await supabaseAdmin
       .from('scheduled_posts')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .update({ status: 'cancelled', updated_at: nowIso })
       .eq('id', scheduledPostId)
       .eq('user_id', user.id)
+      .eq('status', 'scheduled')
       .select()
       .single();
 
@@ -241,7 +254,10 @@ export async function DELETE(req: NextRequest) {
     if (data.post_id) {
       await supabaseAdmin
         .from('posts')
-        .update({ scheduled_at: null, status: 'draft' })
+        .update({
+          scheduled_at: null,
+          status: 'draft',
+        })
         .eq('id', data.post_id);
     }
 

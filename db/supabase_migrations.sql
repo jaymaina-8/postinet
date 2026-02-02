@@ -166,7 +166,9 @@ create table if not exists scheduled_posts (
   user_id uuid references auth.users(id) on delete cascade,
   post_id uuid references posts(id) on delete cascade,
   scheduled_at timestamptz not null,
-  status text not null default 'pending', -- 'pending', 'posted', 'failed', 'cancelled'
+  status text not null default 'scheduled',
+  published_once boolean default false,
+  published_at timestamptz,
   platform text not null,
   error_message text,
   created_at timestamptz default now(),
