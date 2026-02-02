@@ -4,6 +4,15 @@
 
 Your Supabase database is missing some columns that were added in recent migrations. You need to run the migration to fix the 400 errors.
 
+### Scheduler Constraints (New)
+
+If you've already set up the database and just need the new scheduler contract, run:
+
+1. Go to **SQL Editor** in your Supabase project
+2. Click **New Query**
+3. Copy and paste `db/apply_scheduler_constraints.sql`
+4. Click **Run**
+
 ### Option 1: Run the Simple Migration (Recommended)
 
 1. Go to your Supabase Dashboard: https://app.supabase.com

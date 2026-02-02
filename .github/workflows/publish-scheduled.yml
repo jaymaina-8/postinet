@@ -2,7 +2,8 @@ name: Publish Scheduled Posts
 
 on:
   schedule:
-    - cron: '*/2 * * * *'
+    # Run every 2 minutes (GitHub Actions schedule).
+    - cron: "*/2 * * * *"
   workflow_dispatch:
 
 jobs:
