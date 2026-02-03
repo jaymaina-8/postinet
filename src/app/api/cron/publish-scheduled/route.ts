@@ -15,13 +15,24 @@ function isAuthorized(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!process.env.CRON_SECRET) {
+    console.error('[CRON] Missing CRON_SECRET configuration');
+    return NextResponse.json(
+      { ok: false, error: 'Invalid environment configuration' },
+      { status: 500 }
+    );
+  }
+
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const nowIso = new Date().toISOString();
+  const startIso = new Date().toISOString();
+  console.log(`[CRON] ${startIso} — start`);
 
   try {
+    const nowIso = new Date().toISOString();
+    const safetyWindowIso = new Date(Date.now() - 2 * 60 * 1000).toISOString();
     const { data: scheduledPosts, error } = await supabaseAdmin
       .from('scheduled_posts')
       .select(
@@ -45,6 +56,7 @@ export async function POST(request: Request) {
       .eq('status', 'scheduled')
       .eq('published_once', false)
       .lte('scheduled_at', nowIso)
+      .gte('scheduled_at', safetyWindowIso)
       .order('scheduled_at', { ascending: true });
 
     if (error) {
@@ -52,15 +64,27 @@ export async function POST(request: Request) {
     }
 
     if (!scheduledPosts || scheduledPosts.length === 0) {
-      return NextResponse.json({ processed: 0 });
+      console.log(
+        `[CRON] ${new Date().toISOString()} — eligible=0 claimed=0 published=0 failed=0`
+      );
+      return NextResponse.json({
+        ok: true,
+        processed: 0,
+        published: 0,
+        failed: 0,
+      });
     }
 
-    let processed = 0;
+    const eligibleCount = scheduledPosts.length;
+    let claimedCount = 0;
+    let publishedCount = 0;
+    let failedCount = 0;
 
     for (const scheduledPost of scheduledPosts) {
+      const processedAt = new Date().toISOString();
       const { data: claimedPost, error: claimError } = await supabaseAdmin
         .from('scheduled_posts')
-        .update({ status: 'publishing', updated_at: nowIso })
+        .update({ status: 'publishing', updated_at: processedAt })
         .eq('id', scheduledPost.id)
         .eq('status', 'scheduled')
         .eq('published_once', false)
@@ -75,28 +99,38 @@ export async function POST(request: Request) {
         continue;
       }
 
+      claimedCount += 1;
+
       if (scheduledPost.platform !== PLATFORMS.FACEBOOK) {
-        await supabaseAdmin
+        const { error: updateError } = await supabaseAdmin
           .from('scheduled_posts')
           .update({
             status: 'failed',
             error_message: 'Unsupported platform for scheduled publishing',
-            updated_at: nowIso,
+            updated_at: processedAt,
           })
           .eq('id', scheduledPost.id);
+        if (updateError) {
+          throw updateError;
+        }
+        failedCount += 1;
         continue;
       }
 
       const pageId = scheduledPost.platform_account_id;
       if (!pageId) {
-        await supabaseAdmin
+        const { error: updateError } = await supabaseAdmin
           .from('scheduled_posts')
           .update({
             status: 'failed',
             error_message: 'Missing Facebook Page ID for scheduled post',
-            updated_at: nowIso,
+            updated_at: processedAt,
           })
           .eq('id', scheduledPost.id);
+        if (updateError) {
+          throw updateError;
+        }
+        failedCount += 1;
         continue;
       }
 
@@ -109,26 +143,34 @@ export async function POST(request: Request) {
         .single();
 
       if (connectionError || !connection) {
-        await supabaseAdmin
+        const { error: updateError } = await supabaseAdmin
           .from('scheduled_posts')
           .update({
             status: 'failed',
             error_message: 'Facebook Page connection not found',
-            updated_at: nowIso,
+            updated_at: processedAt,
           })
           .eq('id', scheduledPost.id);
+        if (updateError) {
+          throw updateError;
+        }
+        failedCount += 1;
         continue;
       }
 
       if (connection.expires_at && connection.expires_at < Date.now()) {
-        await supabaseAdmin
+        const { error: updateError } = await supabaseAdmin
           .from('scheduled_posts')
           .update({
             status: 'failed',
             error_message: 'Facebook Page access token expired',
-            updated_at: nowIso,
+            updated_at: processedAt,
           })
           .eq('id', scheduledPost.id);
+        if (updateError) {
+          throw updateError;
+        }
+        failedCount += 1;
         continue;
       }
 
@@ -148,22 +190,25 @@ export async function POST(request: Request) {
           imageUrl,
         });
 
-        await supabaseAdmin
+        const { error: scheduledUpdateError } = await supabaseAdmin
           .from('scheduled_posts')
           .update({
             status: 'published',
             error_message: null,
             published_once: true,
-            published_at: nowIso,
-            updated_at: nowIso,
+            published_at: processedAt,
+            updated_at: processedAt,
           })
           .eq('id', scheduledPost.id);
+        if (scheduledUpdateError) {
+          throw scheduledUpdateError;
+        }
 
-        await supabaseAdmin
+        const { error: postUpdateError } = await supabaseAdmin
           .from('posts')
           .update({
-            posted_at: nowIso,
-            published_at: nowIso,
+            posted_at: processedAt,
+            published_at: processedAt,
             platform_post_id: postResult.id,
             platform: PLATFORMS.FACEBOOK,
             platform_account_id: pageId,
@@ -171,30 +216,50 @@ export async function POST(request: Request) {
             published_once: true,
           })
           .eq('id', scheduledPost.post_id);
+        if (postUpdateError) {
+          throw postUpdateError;
+        }
 
-        processed += 1;
+        publishedCount += 1;
       } catch (postError: any) {
-        await supabaseAdmin
+        const { error: scheduledUpdateError } = await supabaseAdmin
           .from('scheduled_posts')
           .update({
             status: 'failed',
             error_message: postError?.message || 'Failed to publish to Facebook',
-            updated_at: nowIso,
+            updated_at: processedAt,
           })
           .eq('id', scheduledPost.id);
+        if (scheduledUpdateError) {
+          throw scheduledUpdateError;
+        }
 
-        await supabaseAdmin
+        const { error: postUpdateError } = await supabaseAdmin
           .from('posts')
           .update({ status: 'failed' })
           .eq('id', scheduledPost.post_id);
+        if (postUpdateError) {
+          throw postUpdateError;
+        }
+
+        failedCount += 1;
       }
     }
 
-    return NextResponse.json({ processed });
+    console.log(
+      `[CRON] ${new Date().toISOString()} — eligible=${eligibleCount} claimed=${claimedCount} published=${publishedCount} failed=${failedCount}`
+    );
+
+    return NextResponse.json({
+      ok: true,
+      processed: claimedCount,
+      published: publishedCount,
+      failed: failedCount,
+    });
   } catch (error: any) {
-    console.error('Scheduled publish error:', error);
+    console.error('[CRON] Scheduled publish error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to publish scheduled posts' },
+      { ok: false, error: error.message || 'Failed to publish scheduled posts' },
       { status: 500 }
     );
   }

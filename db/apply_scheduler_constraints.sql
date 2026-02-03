@@ -1,6 +1,21 @@
 -- One-time scheduler schema alignment (idempotent)
 -- Run in Supabase SQL Editor to match the new cron scheduler contract.
 
+create table if not exists scheduled_posts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid,
+  post_id uuid,
+  status text default 'scheduled',
+  scheduled_at timestamptz,
+  published_once boolean default false,
+  published_at timestamptz,
+  platform text,
+  platform_account_id text,
+  error_message text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 alter table if exists scheduled_posts
   add column if not exists status text default 'scheduled';
 
