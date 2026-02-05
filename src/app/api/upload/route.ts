@@ -37,18 +37,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json(
-        { error: 'Invalid file type. Allowed: images (JPEG, PNG, GIF, WebP) and videos (MP4, WebM)' },
-        { status: 400 }
-      );
-    }
+    const contentType = file.type || 'application/octet-stream';
 
     // Generate unique filename
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const fileExt = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+    const fileName = `${user.id}/${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(7)}.${fileExt}`;
 
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
@@ -58,7 +53,7 @@ export async function POST(req: NextRequest) {
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('content')
       .upload(fileName, buffer, {
-        contentType: file.type,
+        contentType,
         upsert: false,
       });
 
@@ -79,7 +74,7 @@ export async function POST(req: NextRequest) {
       success: true,
       url: urlData.publicUrl,
       path: fileName,
-      type: file.type,
+      type: contentType,
       size: file.size,
     });
   } catch (error: any) {
