@@ -14,6 +14,20 @@ function isAuthorized(request: Request) {
   return Boolean(secret && authHeader === `Bearer ${secret}`);
 }
 
+function getMediaKind(mediaUrl?: string | null) {
+  if (!mediaUrl) {
+    return 'none';
+  }
+  const lower = mediaUrl.toLowerCase();
+  if (lower.match(/\.(mp4|mov|webm|mkv|avi|m4v)(\?|#|$)/)) {
+    return 'video';
+  }
+  if (lower.match(/\.(jpg|jpeg|png|gif|webp)(\?|#|$)/)) {
+    return 'image';
+  }
+  return 'unknown';
+}
+
 export async function POST(request: Request) {
   if (!process.env.CRON_SECRET) {
     console.error('[CRON] Missing CRON_SECRET configuration');
@@ -100,6 +114,13 @@ export async function POST(request: Request) {
       }
 
       claimedCount += 1;
+      const post = Array.isArray(scheduledPost.posts)
+        ? scheduledPost.posts[0]
+        : scheduledPost.posts;
+      const mediaKind = getMediaKind(post?.media_url);
+      console.log(
+        `[CRON] ${processedAt} — post_id=${scheduledPost.post_id} scheduled_id=${scheduledPost.id} media=${mediaKind} platform=${scheduledPost.platform}`
+      );
 
       if (scheduledPost.platform !== PLATFORMS.FACEBOOK) {
         const { error: updateError } = await supabaseAdmin
@@ -174,9 +195,6 @@ export async function POST(request: Request) {
         continue;
       }
 
-      const post = Array.isArray(scheduledPost.posts)
-        ? scheduledPost.posts[0]
-        : scheduledPost.posts;
       const messageBase = post?.ai_caption || post?.content || '';
       const hashtags = post?.ai_hashtags ? `\n\n${post.ai_hashtags}` : '';
       const message = `${messageBase}${hashtags}`.trim();
@@ -222,6 +240,9 @@ export async function POST(request: Request) {
 
         publishedCount += 1;
       } catch (postError: any) {
+        console.error(
+          `[CRON] ${processedAt} — publish_failed post_id=${scheduledPost.post_id} scheduled_id=${scheduledPost.id} error=${postError?.message || 'unknown'}`
+        );
         const { error: scheduledUpdateError } = await supabaseAdmin
           .from('scheduled_posts')
           .update({

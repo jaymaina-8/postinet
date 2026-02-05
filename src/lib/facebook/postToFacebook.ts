@@ -25,6 +25,17 @@ export interface FacebookErrorResponse {
 }
 
 const FACEBOOK_GRAPH_API_VERSION = process.env.FACEBOOK_GRAPH_API_VERSION || 'v19.0';
+const VIDEO_EXTENSIONS = new Set(['mp4', 'mov', 'webm', 'mkv', 'avi', 'm4v']);
+
+function isVideoUrl(mediaUrl: string): boolean {
+  try {
+    const { pathname } = new URL(mediaUrl);
+    const extension = pathname.split('.').pop()?.toLowerCase();
+    return Boolean(extension && VIDEO_EXTENSIONS.has(extension));
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Post text-only content to Facebook Page
@@ -97,6 +108,42 @@ async function postImageToFacebook(
 }
 
 /**
+ * Post video with description to Facebook Page
+ */
+async function postVideoToFacebook(
+  pageId: string,
+  pageAccessToken: string,
+  description: string,
+  videoUrl: string
+): Promise<FacebookPostResponse> {
+  const url = `https://graph.facebook.com/${FACEBOOK_GRAPH_API_VERSION}/${pageId}/videos`;
+
+  const params = new URLSearchParams({
+    file_url: videoUrl,
+    description: description,
+    access_token: pageAccessToken,
+  });
+
+  const response = await fetch(`${url}?${params.toString()}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || data.error) {
+    const error = data as FacebookErrorResponse;
+    throw new Error(
+      `Facebook API error: ${error.error?.message || response.statusText} (Code: ${error.error?.code || response.status})`
+    );
+  }
+
+  return data as FacebookPostResponse;
+}
+
+/**
  * Post content to Facebook Page
  * Automatically chooses text-only or image post based on imageUrl
  */
@@ -117,8 +164,11 @@ export async function postToFacebook(
     throw new Error('Either message or imageUrl must be provided');
   }
 
-  // If image URL exists, use photo endpoint
+  // If media URL exists, choose image or video endpoint
   if (imageUrl) {
+    if (isVideoUrl(imageUrl)) {
+      return await postVideoToFacebook(pageId, pageAccessToken, message || '', imageUrl);
+    }
     return await postImageToFacebook(pageId, pageAccessToken, message || '', imageUrl);
   }
 
