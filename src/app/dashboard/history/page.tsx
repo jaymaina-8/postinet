@@ -142,6 +142,7 @@ export default function HistoryPage() {
         scheduled: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
         published: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
         failed: 'bg-rose-500/20 text-rose-300 border border-rose-500/30',
+        cancelled: 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/30',
       };
 
     return (
@@ -232,24 +233,12 @@ export default function HistoryPage() {
               key={post.id}
               className="bg-zinc-900/60 rounded-xl border border-zinc-800 p-6 hover:border-zinc-700 transition-colors"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    {getStatusBadge(post.status)}
-                    <span className="text-sm text-zinc-400">
-                      Created: {formatDate(post.created_at)}
-                    </span>
-                    {post.scheduled_at && (
-                      <span className="text-sm text-zinc-400">
-                        Scheduled: {formatDate(post.scheduled_at)}
-                      </span>
-                    )}
-                    {post.posted_at && (
-                      <span className="text-sm text-zinc-400">
-                        Published: {formatDate(post.posted_at)}
-                      </span>
-                    )}
-                  </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                {getStatusBadge(post.status)}
+                <div className="flex flex-wrap gap-3 text-sm text-zinc-400">
+                  <span>Created: {formatDate(post.created_at)}</span>
+                  {post.scheduled_at && <span>Scheduled: {formatDate(post.scheduled_at)}</span>}
+                  {post.posted_at && <span>Published: {formatDate(post.posted_at)}</span>}
                 </div>
               </div>
 

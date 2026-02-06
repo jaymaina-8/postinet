@@ -32,6 +32,7 @@ export default function CreateContentPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [previewPlatform, setPreviewPlatform] = useState("Facebook");
 
   useEffect(() => {
     const tomorrow = new Date();
@@ -304,11 +305,11 @@ export default function CreateContentPage() {
   );
 
   const platforms = [
-    { id: PLATFORMS.FACEBOOK, label: "Facebook" },
-    { id: PLATFORMS.YOUTUBE, label: "YouTube" },
-    { id: PLATFORMS.INSTAGRAM, label: "Instagram" },
-    { id: "tiktok", label: "TikTok" },
-    { id: "x", label: "X" },
+    { id: PLATFORMS.FACEBOOK, label: "Facebook", supported: true },
+    { id: PLATFORMS.YOUTUBE, label: "YouTube", supported: false },
+    { id: PLATFORMS.INSTAGRAM, label: "Instagram", supported: false },
+    { id: "tiktok", label: "TikTok", supported: false },
+    { id: "x", label: "X", supported: false },
   ];
 
   return (
@@ -319,12 +320,10 @@ export default function CreateContentPage() {
           <p className="text-zinc-400">Write once, publish everywhere.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_0.7fr] gap-6">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-6">
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Caption
-              </label>
+              <label className="block text-sm font-medium text-zinc-300 mb-2">Caption</label>
               <textarea
                 className="w-full min-h-[160px] rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 placeholder="Write your post..."
@@ -337,9 +336,7 @@ export default function CreateContentPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Media
-              </label>
+              <label className="block text-sm font-medium text-zinc-300 mb-2">Media</label>
               <div className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950 px-4 py-4">
                 <div className="flex flex-col gap-3">
                   <input
@@ -484,7 +481,7 @@ export default function CreateContentPage() {
             <div className="space-y-2">
               {platforms.map((platform) => {
                 const connected = connectedPlatforms.includes(platform.id);
-                const supported = platform.id === PLATFORMS.FACEBOOK;
+                const supported = platform.supported;
                 return (
                   <div
                     key={platform.id}
@@ -510,11 +507,27 @@ export default function CreateContentPage() {
 
             <div>
               <h3 className="text-lg font-semibold text-white">Preview</h3>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+              <div className="flex flex-wrap gap-2">
+                {["Facebook", "Instagram", "YouTube", "TikTok", "X"].map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => setPreviewPlatform(label)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                      previewPlatform === label
+                        ? "bg-zinc-100 text-zinc-900"
+                        : "border border-zinc-800 text-zinc-300"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
                 {uploadedMediaUrl ? "Media ready" : "No media selected"} · {content ? "Caption added" : "No caption yet"}
               </div>
               <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-                <div className="text-xs text-zinc-500 mb-2">Facebook Preview</div>
+                <div className="text-xs text-zinc-500 mb-2">{previewPlatform} Preview</div>
                 <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-3 text-sm text-zinc-200">
                   {content || "Your caption will appear here."}
                 </div>

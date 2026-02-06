@@ -100,12 +100,10 @@ export default function UploadPage() {
     <div className="max-w-5xl mx-auto py-8 space-y-6">
       <div>
         <h1 className="text-3xl font-semibold text-white">Upload media</h1>
-        <p className="text-zinc-400 mt-2">
-          Add assets once and reuse them across posts.
-        </p>
+        <p className="text-zinc-400 mt-2">Add assets once. Reuse everywhere.</p>
       </div>
 
-      <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-8 text-center">
+      <div id="upload" className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-12 text-center scroll-mt-24">
         <div className="mx-auto flex max-w-md flex-col items-center gap-4">
           <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-300">
             <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -114,9 +112,7 @@ export default function UploadPage() {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-white">Drag & drop your file</h2>
-            <p className="text-sm text-zinc-400">
-              Supports video, image, and text assets up to your plan limit.
-            </p>
+            <p className="text-sm text-zinc-400">Video and image assets up to your plan limit.</p>
           </div>
           <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 transition-colors">
             Browse files
@@ -128,9 +124,7 @@ export default function UploadPage() {
               disabled={uploading}
             />
           </label>
-          <p className="text-xs text-zinc-500">
-            Supported: JPG, PNG, GIF, WEBP, MP4, WEBM, MOV
-          </p>
+          <p className="text-xs text-zinc-500">Supported: JPG, PNG, GIF, WEBP, MP4, WEBM, MOV</p>
         </div>
       </div>
 

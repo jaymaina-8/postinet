@@ -351,7 +351,7 @@ function AccountsPageContent() {
                 key={platform}
                 className={`border border-zinc-800 bg-zinc-900/60 rounded-xl p-6 ${isInstagram ? 'opacity-60' : ''}`}
               >
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex items-start gap-4">
                     {getPlatformIcon(platform)}
                     <div>
@@ -403,7 +403,7 @@ function AccountsPageContent() {
                   </div>
                   
                   {!isInstagram && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       {account ? (
                         <>
                           {expired && (

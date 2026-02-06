@@ -1,10 +1,14 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS } from "@/lib/platforms";
+import PrimaryActionCard from "@/components/dashboard/PrimaryActionCard";
+import RecentActivityList from "@/components/dashboard/RecentActivityList";
+import PlatformStatusCard from "@/components/dashboard/PlatformStatusCard";
+import ThisWeekStats from "@/components/dashboard/ThisWeekStats";
+import EmptyStateHint from "@/components/dashboard/EmptyStateHint";
 
 interface ConnectedAccount {
   platform: string;
@@ -150,224 +154,53 @@ export default function DashboardPage() {
     }
   }
 
-  function getCurrentStep(): number {
-    if (!stats.hasConnectedAccounts) return 1;
-    if (!stats.hasDrafts && !stats.hasPublishedPosts) return 2;
-    if (stats.hasDrafts && !stats.hasPublishedPosts) return 3;
-    return 4; // All done
-  }
-
-  const currentStep = getCurrentStep();
-
-  const isEmpty = !loading && recentPosts.length === 0 && !stats.hasConnectedAccounts;
-
-  const statusStyles = useMemo(
-    () => ({
-      scheduled: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
-      published: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
-      failed: "bg-rose-500/20 text-rose-300 border border-rose-500/30",
-      draft: "bg-zinc-500/20 text-zinc-300 border border-zinc-500/30",
-    }),
-    []
-  );
-
-  function getStatusLabel(post: RecentPost) {
-    if (post.status === "failed") return "Failed";
-    if (post.posted_at) return "Published";
-    if (post.scheduled_at) return "Scheduled";
-    return "Draft";
-  }
+  const showConnectHint = !loading && !stats.hasConnectedAccounts;
+  const showUploadHint = !loading && stats.hasConnectedAccounts && recentPosts.length === 0;
+  const showFailureHint = !loading && stats.failedCount > 0;
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold text-white">Welcome to Postinet</h1>
-        <p className="text-zinc-400">
-          Your multi-platform command center. Create once, schedule everywhere.
-        </p>
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold text-white">Welcome back</h1>
+        <p className="text-zinc-400">Your creator-grade publishing hub.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border border-zinc-800 bg-zinc-900/60 p-0">
-          <CardContent className="p-6">
-            <div className="flex flex-col gap-6">
-              <div>
-                <p className="text-sm uppercase tracking-wide text-zinc-500">Primary Action</p>
-                <h2 className="text-2xl font-semibold text-white mt-2">Create a post</h2>
-                <p className="text-zinc-400 mt-2">
-                  Compose once and publish to your connected platforms in minutes.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/dashboard/generate"
-                  className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-5 py-3 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 transition-colors"
-                >
-                  Create a post
-                </Link>
-                <Link
-                  href="/dashboard/create"
-                  className="inline-flex items-center justify-center rounded-lg border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-200 hover:border-zinc-500 hover:text-white transition-colors"
-                >
-                  Upload media
-                </Link>
-                <Link
-                  href="/dashboard/calendar"
-                  className="inline-flex items-center justify-center rounded-lg border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-200 hover:border-zinc-500 hover:text-white transition-colors"
-                >
-                  Schedule content
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                  { label: "Create", href: "/dashboard/generate" },
-                  { label: "Schedule", href: "/dashboard/calendar" },
-                  { label: "Analytics", href: "/dashboard/analytics" },
-                  { label: "Accounts", href: "/dashboard/accounts" },
-                ].map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm text-zinc-300 hover:border-zinc-700 hover:text-white transition-colors"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <PrimaryActionCard />
 
-        <Card className="border border-zinc-800 bg-zinc-900/60">
-          <CardHeader>
-            <CardTitle className="text-white">Quick Stats</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-400">Published this week</span>
-              <span className="text-white font-semibold">{stats.publishedThisWeek}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-400">Scheduled upcoming</span>
-              <span className="text-white font-semibold">{stats.scheduledUpcoming}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-400">Failed posts</span>
-              <Link href="/dashboard/history" className="text-rose-300 hover:text-rose-200 font-semibold">
-                {stats.failedCount}
-              </Link>
-            </div>
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-3 text-xs text-zinc-500">
-              Everything important is one click away.
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Create", href: "/dashboard/create" },
+          { label: "Schedule", href: "/dashboard/calendar" },
+          { label: "Analytics", href: "/dashboard/analytics" },
+          { label: "Accounts", href: "/dashboard/accounts" },
+        ].map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm font-semibold text-zinc-200 hover:border-zinc-600 transition-colors"
+          >
+            {item.label}
+          </Link>
+        ))}
       </div>
 
-      {isEmpty && (
-        <Card className="border border-zinc-800 bg-zinc-900/60">
-          <CardContent className="p-6 text-center">
-            <h3 className="text-lg font-semibold text-white">Get started in under 2 minutes</h3>
-            <p className="text-zinc-400 mt-2">
-              Connect a social account, upload media, and schedule your first post.
-            </p>
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <Link
-                href="/dashboard/accounts"
-                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 transition-colors"
-              >
-                Connect account
-              </Link>
-              <Link
-                href="/dashboard/create"
-                className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 hover:border-zinc-500 hover:text-white transition-colors"
-              >
-                Upload media
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {showConnectHint && <EmptyStateHint variant="connect" />}
+      {!showConnectHint && showUploadHint && <EmptyStateHint variant="upload" />}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border border-zinc-800 bg-zinc-900/60">
-          <CardHeader>
-            <CardTitle className="text-white">Recent activity</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading ? (
-              <div className="text-sm text-zinc-500">Loading recent posts...</div>
-            ) : recentPosts.length === 0 ? (
-              <div className="text-sm text-zinc-500">No posts yet. Create your first post to see activity here.</div>
-            ) : (
-              recentPosts.map((post) => {
-                const status = getStatusLabel(post).toLowerCase();
-                return (
-                  <div
-                    key={post.id}
-                    className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-zinc-800 flex items-center justify-center text-xs text-zinc-500">
-                        {post.media_url ? "Media" : "Text"}
-                      </div>
-                      <div>
-                        <p className="text-sm text-zinc-200 line-clamp-1">
-                          {post.content || "Untitled post"}
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          {post.scheduled_at
-                            ? `Scheduled for ${new Date(post.scheduled_at).toLocaleString()}`
-                            : post.posted_at
-                            ? `Published on ${new Date(post.posted_at).toLocaleString()}`
-                            : `Created ${new Date(post.created_at).toLocaleDateString()}`}
-                        </p>
-                      </div>
-                    </div>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusStyles[status as keyof typeof statusStyles]}`}>
-                      {getStatusLabel(post)}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border border-zinc-800 bg-zinc-900/60">
-          <CardHeader>
-            <CardTitle className="text-white">Platform status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-400">Connected accounts</span>
-              <span className="text-white font-semibold">{stats.connectedPlatforms.length}</span>
-            </div>
-            <div className="space-y-2">
-              {stats.connectedPlatforms.includes(PLATFORMS.FACEBOOK) && (
-                <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm">
-                  <span className="text-zinc-300">Facebook</span>
-                  <span className="text-emerald-400">Connected</span>
-                </div>
-              )}
-              {stats.connectedPlatforms.includes(PLATFORMS.YOUTUBE) && (
-                <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm">
-                  <span className="text-zinc-300">YouTube</span>
-                  <span className="text-emerald-400">Connected</span>
-                </div>
-              )}
-              {!stats.hasConnectedAccounts && (
-                <div className="text-sm text-zinc-500">No accounts connected yet.</div>
-              )}
-            </div>
-            <Link
-              href="/dashboard/accounts"
-              className="inline-flex items-center justify-center rounded-lg border border-zinc-800 px-4 py-2 text-sm text-zinc-200 hover:border-zinc-600 transition-colors"
-            >
-              Manage accounts
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+        <RecentActivityList
+          posts={recentPosts}
+          loading={loading}
+          showFailureHint={showFailureHint}
+        />
+        <div className="space-y-6">
+          <ThisWeekStats
+            publishedThisWeek={stats.publishedThisWeek}
+            scheduledUpcoming={stats.scheduledUpcoming}
+            failedCount={stats.failedCount}
+          />
+          <PlatformStatusCard connectedPlatforms={stats.connectedPlatforms} />
+        </div>
       </div>
     </div>
   );
