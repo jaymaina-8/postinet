@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import supabase from "@/lib/supabaseClient";
 import { PLATFORMS } from "@/lib/platforms";
 import { PageGate, usePageScope } from "@/components/PageScope";
+import { useSearchParams } from "next/navigation";
 
 const allowedTypes = [
   "image/jpeg",
@@ -17,6 +18,7 @@ const allowedTypes = [
 
 export default function CreateContentPage() {
   const { selectedPage } = usePageScope();
+  const searchParams = useSearchParams();
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
@@ -28,6 +30,8 @@ export default function CreateContentPage() {
   const [scheduledTime, setScheduledTime] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
     const tomorrow = new Date();
@@ -37,6 +41,31 @@ export default function CreateContentPage() {
     if (!scheduledDate) setScheduledDate(dateStr);
     if (!scheduledTime) setScheduledTime("09:00");
   }, [scheduledDate, scheduledTime]);
+
+  useEffect(() => {
+    const mediaUrl = searchParams.get("mediaUrl");
+    if (mediaUrl) {
+      setUploadedMediaUrl(mediaUrl);
+      setFile(null);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    async function fetchConnectedPlatforms() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const result = await supabase
+        .from("connected_accounts")
+        .select("platform, facebook_page_access_token")
+        .eq("user_id", session.user.id);
+      if (result.error) return;
+      const platforms = (result.data || [])
+        .filter((acc) => (acc.platform === PLATFORMS.FACEBOOK ? acc.facebook_page_access_token != null : true))
+        .map((acc) => acc.platform);
+      setConnectedPlatforms(platforms);
+    }
+    fetchConnectedPlatforms();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -241,137 +270,257 @@ export default function CreateContentPage() {
     }
   };
 
+  const handleSaveDraft = async () => {
+    if (!content.trim() && !file && !uploadedMediaUrl) {
+      setError("Please add content or upload media.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      let mediaUrl = uploadedMediaUrl;
+      if (file && !uploadedMediaUrl) {
+        mediaUrl = await uploadMedia();
+      }
+      await createDraftPost(mediaUrl || null);
+      setSuccess("Draft saved successfully.");
+      setContent("");
+      setFile(null);
+      setUploadedMediaUrl(null);
+      setUploadProgress(0);
+    } catch (err: any) {
+      setError(err.message || "Failed to save draft.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const timezone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+    []
+  );
+
+  const platforms = [
+    { id: PLATFORMS.FACEBOOK, label: "Facebook" },
+    { id: PLATFORMS.YOUTUBE, label: "YouTube" },
+    { id: PLATFORMS.INSTAGRAM, label: "Instagram" },
+    { id: "tiktok", label: "TikTok" },
+    { id: "x", label: "X" },
+  ];
+
   return (
     <PageGate>
-      <div className="max-w-4xl mx-auto py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-zinc-900 mb-2">Create Post</h1>
-          <p className="text-zinc-600">Create, upload, and schedule in one place.</p>
+      <div className="max-w-6xl mx-auto py-8 space-y-6">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-semibold text-white">Post composer</h1>
+          <p className="text-zinc-400">Write once, publish everywhere.</p>
         </div>
 
-        <div className="bg-white rounded-lg border border-zinc-200 p-6 space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Post Content
-            </label>
-            <textarea
-              className="w-full p-3 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
-              placeholder="Write your post..."
-              value={content}
-              rows={6}
-              onChange={(e) => setContent(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Media (Optional)
-            </label>
-            <div className="space-y-2">
-              <input
-                type="file"
-                accept="image/*,video/*"
-                onChange={handleFileChange}
-                className="w-full border border-zinc-300 rounded-lg px-3 py-2 text-sm"
-                disabled={uploading || submitting}
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-2">
+                Caption
+              </label>
+              <textarea
+                className="w-full min-h-[160px] rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                placeholder="Write your post..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
               />
-              {file && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-zinc-500">
-                    <span>{file.name}</span>
-                    {uploadedMediaUrl ? <span className="text-green-600">Uploaded</span> : null}
-                  </div>
-                  {!uploadedMediaUrl && (
-                    <button
-                      type="button"
-                      onClick={handleUploadClick}
-                      disabled={uploading}
-                      className="text-sm bg-zinc-100 text-zinc-700 px-3 py-1 rounded hover:bg-zinc-200 transition-colors disabled:opacity-50"
-                    >
-                      {uploading ? "Uploading..." : "Upload Media"}
-                    </button>
-                  )}
-                  {uploading && (
-                    <div className="w-full bg-zinc-100 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{ width: `${uploadProgress}%` }}
-                      />
+              <div className="mt-2 text-xs text-zinc-500">
+                {content.length} characters
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-2">
+                Media
+              </label>
+              <div className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950 px-4 py-4">
+                <div className="flex flex-col gap-3">
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={handleFileChange}
+                    className="w-full text-sm text-zinc-400"
+                    disabled={uploading || submitting}
+                  />
+                  {(file || uploadedMediaUrl) && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-zinc-500">
+                        <span>{file?.name || "Uploaded asset"}</span>
+                        {uploadedMediaUrl ? <span className="text-emerald-400">Ready</span> : null}
+                      </div>
+                      {!uploadedMediaUrl && (
+                        <button
+                          type="button"
+                          onClick={handleUploadClick}
+                          disabled={uploading}
+                          className="text-sm bg-zinc-100 text-zinc-900 px-3 py-1 rounded hover:bg-white transition-colors disabled:opacity-50"
+                        >
+                          {uploading ? "Uploading..." : "Upload Media"}
+                        </button>
+                      )}
+                      {uploading && (
+                        <div className="w-full bg-zinc-800 rounded-full h-2">
+                          <div
+                            className="bg-emerald-500 h-2 rounded-full transition-all"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                      )}
+                      {uploadedMediaUrl && (
+                        <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-xs text-zinc-400">
+                          Media uploaded and ready for publishing.
+                        </div>
+                      )}
                     </div>
                   )}
-                  {uploadedMediaUrl && file.type.startsWith("image/") && (
-                    <img
-                      src={uploadedMediaUrl}
-                      alt="Uploaded preview"
-                      className="max-w-xs rounded border border-zinc-200"
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-zinc-300">Schedule</span>
+                <label className="inline-flex items-center gap-2 text-xs text-zinc-400">
+                  <input
+                    type="checkbox"
+                    checked={scheduleEnabled}
+                    onChange={(e) => setScheduleEnabled(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Schedule for later
+                </label>
+              </div>
+              {scheduleEnabled && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-2">Date</label>
+                    <input
+                      type="date"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
                     />
-                  )}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-2">Time</label>
+                    <input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="text-xs text-zinc-500">Timezone: {timezone}</div>
+            </div>
+
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950">
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between px-4 py-3 text-sm text-zinc-300"
+              >
+                Advanced options
+                <span className="text-zinc-500">{advancedOpen ? "−" : "+"}</span>
+              </button>
+              {advancedOpen && (
+                <div className="border-t border-zinc-800 px-4 py-4 text-sm text-zinc-500">
+                  UTM tags, first comment, and per-platform overrides will appear here.
                 </div>
               )}
             </div>
-          </div>
 
-          <div className="border-t border-zinc-200 pt-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-zinc-700">Schedule for later</span>
-              <input
-                type="checkbox"
-                checked={scheduleEnabled}
-                onChange={(e) => setScheduleEnabled(e.target.checked)}
-                className="h-4 w-4"
-              />
-            </div>
-
-            {scheduleEnabled && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">Date</label>
-                  <input
-                    type="date"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="w-full border border-zinc-300 rounded-lg px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">Time</label>
-                  <input
-                    type="time"
-                    value={scheduledTime}
-                    onChange={(e) => setScheduledTime(e.target.value)}
-                    className="w-full border border-zinc-300 rounded-lg px-3 py-2"
-                  />
-                </div>
+            {error && (
+              <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                {error}
               </div>
             )}
+
+            {success && (
+              <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                {success}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                className="flex-1 bg-emerald-500 text-zinc-950 rounded-lg px-6 py-3 hover:bg-emerald-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                onClick={handleSubmit}
+                disabled={submitting || uploading}
+              >
+                {submitting
+                  ? scheduleEnabled
+                    ? "Scheduling..."
+                    : "Publishing..."
+                  : scheduleEnabled
+                  ? "Schedule post"
+                  : "Publish now"}
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-zinc-700 px-6 py-3 text-sm font-semibold text-zinc-200 hover:border-zinc-500 transition-colors disabled:opacity-50"
+                onClick={handleSaveDraft}
+                disabled={submitting || uploading}
+              >
+                Save draft
+              </button>
+            </div>
           </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
-              {error}
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Platforms</h3>
+              <p className="text-sm text-zinc-400">Choose where to publish.</p>
             </div>
-          )}
-
-          {success && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800">
-              {success}
+            <div className="space-y-2">
+              {platforms.map((platform) => {
+                const connected = connectedPlatforms.includes(platform.id);
+                const supported = platform.id === PLATFORMS.FACEBOOK;
+                return (
+                  <div
+                    key={platform.id}
+                    className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm"
+                  >
+                    <div>
+                      <p className="text-zinc-200">{platform.label}</p>
+                      <p className="text-xs text-zinc-500">
+                        {supported ? (connected ? "Connected" : "Not connected") : "Coming soon"}
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      disabled={!supported || !connected}
+                      checked={supported && connected}
+                      onChange={() => undefined}
+                    />
+                  </div>
+                );
+              })}
             </div>
-          )}
 
-          <button
-            className="w-full bg-zinc-900 text-white rounded-lg px-6 py-3 hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            onClick={handleSubmit}
-            disabled={submitting || uploading}
-          >
-            {submitting
-              ? scheduleEnabled
-                ? "Scheduling..."
-                : "Posting..."
-              : scheduleEnabled
-              ? "Schedule Post"
-              : "Post Now"}
-          </button>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Preview</h3>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+                {uploadedMediaUrl ? "Media ready" : "No media selected"} · {content ? "Caption added" : "No caption yet"}
+              </div>
+              <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+                <div className="text-xs text-zinc-500 mb-2">Facebook Preview</div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-3 text-sm text-zinc-200">
+                  {content || "Your caption will appear here."}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </PageGate>

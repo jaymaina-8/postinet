@@ -1,5 +1,5 @@
 import SchedulerView from "@/components/dashboard/SchedulerView";
 
-export default function SchedulePage() {
+export default function CalendarPage() {
   return <SchedulerView />;
 }

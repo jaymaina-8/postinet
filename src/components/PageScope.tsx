@@ -135,15 +135,15 @@ export function PageScopeIndicator() {
   if (!selectedPage) return null;
 
   return (
-    <div className="mb-4 rounded-lg border border-blue-200 bg-white px-4 py-3 text-sm text-zinc-700">
+    <div className="mb-4 rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span>
-          Creating for: <span className="font-medium">{selectedPage.name}</span> (Facebook)
+          Creating for: <span className="font-medium text-zinc-100">{selectedPage.name}</span> (Facebook)
         </span>
         <button
           type="button"
           onClick={clearSelection}
-          className="text-blue-600 hover:underline"
+          className="text-emerald-400 hover:underline"
         >
           Change Page
         </button>
@@ -161,14 +161,14 @@ export function PageGate({ children }: { children: React.ReactNode }) {
 
   if (pages.length === 0) {
     return (
-      <div className="max-w-xl mx-auto mt-12 bg-white border border-zinc-200 rounded-lg p-8 text-center">
-        <h2 className="text-xl font-semibold text-zinc-900 mb-2">Connect a Facebook Page</h2>
-        <p className="text-zinc-600 mb-6">
+      <div className="max-w-xl mx-auto mt-12 bg-zinc-900/60 border border-zinc-800 rounded-xl p-8 text-center">
+        <h2 className="text-xl font-semibold text-zinc-100 mb-2">Connect a Facebook Page</h2>
+        <p className="text-zinc-400 mb-6">
           You need a connected Facebook Page before creating or scheduling content.
         </p>
         <Link
           href="/dashboard/accounts"
-          className="inline-flex items-center justify-center bg-zinc-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-zinc-800 transition-colors"
+          className="inline-flex items-center justify-center bg-emerald-500 text-zinc-950 px-6 py-3 rounded-lg font-medium hover:bg-emerald-400 transition-colors"
         >
           Connect Facebook Page
         </Link>
@@ -178,9 +178,9 @@ export function PageGate({ children }: { children: React.ReactNode }) {
 
   if (!selectedPage) {
     return (
-      <div className="max-w-xl mx-auto mt-12 bg-white border border-zinc-200 rounded-lg p-8">
-        <h2 className="text-xl font-semibold text-zinc-900 mb-2">Select a Facebook Page</h2>
-        <p className="text-zinc-600 mb-6">
+      <div className="max-w-xl mx-auto mt-12 bg-zinc-900/60 border border-zinc-800 rounded-xl p-8">
+        <h2 className="text-xl font-semibold text-zinc-100 mb-2">Select a Facebook Page</h2>
+        <p className="text-zinc-400 mb-6">
           Choose the Page you want to create and schedule content for.
         </p>
         <div className="space-y-3">
@@ -189,10 +189,10 @@ export function PageGate({ children }: { children: React.ReactNode }) {
               key={page.pageId}
               type="button"
               onClick={() => selectPage(page)}
-              className="w-full flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-left hover:border-zinc-300 hover:bg-white transition-colors"
+              className="w-full flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-left hover:border-zinc-700 hover:bg-zinc-900 transition-colors"
             >
-              <span className="font-medium text-zinc-900">{page.name}</span>
-              <span className="text-sm text-zinc-500">Select</span>
+              <span className="font-medium text-zinc-100">{page.name}</span>
+              <span className="text-sm text-zinc-400">Select</span>
             </button>
           ))}
         </div>

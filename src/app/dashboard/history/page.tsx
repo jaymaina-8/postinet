@@ -137,11 +137,11 @@ export default function HistoryPage() {
   }
 
   function getStatusBadge(status: string) {
-      const styles = {
-        draft: 'bg-zinc-200 text-zinc-700',
-        scheduled: 'bg-yellow-100 text-yellow-700',
-        published: 'bg-green-100 text-green-700',
-        failed: 'bg-red-100 text-red-700',
+    const styles = {
+        draft: 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/30',
+        scheduled: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+        published: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+        failed: 'bg-rose-500/20 text-rose-300 border border-rose-500/30',
       };
 
     return (
@@ -155,8 +155,8 @@ export default function HistoryPage() {
     <PageGate>
       <div className="max-w-6xl mx-auto py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-zinc-900 mb-2">Content History</h1>
-          <p className="text-zinc-600">View your drafts, scheduled posts, and published content</p>
+          <h1 className="text-3xl font-semibold text-white mb-2">Content history</h1>
+          <p className="text-zinc-400">View your drafts, scheduled posts, and published content</p>
         </div>
 
       {/* Filters */}
@@ -165,8 +165,8 @@ export default function HistoryPage() {
           onClick={() => setFilter('all')}
           className={`px-4 py-2 rounded text-sm font-medium ${
             filter === 'all'
-              ? 'bg-zinc-900 text-white'
-              : 'bg-white text-zinc-700 border border-zinc-300'
+              ? 'bg-emerald-500 text-zinc-950'
+              : 'border border-zinc-800 text-zinc-300'
           }`}
         >
           All
@@ -175,8 +175,8 @@ export default function HistoryPage() {
           onClick={() => setFilter('draft')}
           className={`px-4 py-2 rounded text-sm font-medium ${
             filter === 'draft'
-              ? 'bg-zinc-900 text-white'
-              : 'bg-white text-zinc-700 border border-zinc-300'
+              ? 'bg-emerald-500 text-zinc-950'
+              : 'border border-zinc-800 text-zinc-300'
           }`}
         >
           Drafts
@@ -185,8 +185,8 @@ export default function HistoryPage() {
           onClick={() => setFilter('scheduled')}
           className={`px-4 py-2 rounded text-sm font-medium ${
             filter === 'scheduled'
-              ? 'bg-zinc-900 text-white'
-              : 'bg-white text-zinc-700 border border-zinc-300'
+              ? 'bg-emerald-500 text-zinc-950'
+              : 'border border-zinc-800 text-zinc-300'
           }`}
         >
           Scheduled
@@ -195,8 +195,8 @@ export default function HistoryPage() {
           onClick={() => setFilter('published')}
           className={`px-4 py-2 rounded text-sm font-medium ${
             filter === 'published'
-              ? 'bg-zinc-900 text-white'
-              : 'bg-white text-zinc-700 border border-zinc-300'
+              ? 'bg-emerald-500 text-zinc-950'
+              : 'border border-zinc-800 text-zinc-300'
           }`}
         >
           Published
@@ -205,8 +205,8 @@ export default function HistoryPage() {
           onClick={() => setFilter('failed')}
           className={`px-4 py-2 rounded text-sm font-medium ${
             filter === 'failed'
-              ? 'bg-zinc-900 text-white'
-              : 'bg-white text-zinc-700 border border-zinc-300'
+              ? 'bg-emerald-500 text-zinc-950'
+              : 'border border-zinc-800 text-zinc-300'
           }`}
         >
           Failed
@@ -218,8 +218,8 @@ export default function HistoryPage() {
         <div className="text-center py-12 text-zinc-500">Loading posts...</div>
       ) : posts.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-zinc-500 text-lg">No posts found</p>
-          <p className="text-zinc-400 text-sm mt-2">
+          <p className="text-zinc-400 text-lg">No posts found</p>
+          <p className="text-zinc-500 text-sm mt-2">
             {filter === 'all'
               ? 'Start creating content to see it here'
               : `No ${filter} posts yet`}
@@ -230,22 +230,22 @@ export default function HistoryPage() {
           {posts.map((post) => (
             <div
               key={post.id}
-              className="bg-white rounded-lg border border-zinc-200 p-6 hover:shadow-md transition-shadow"
+              className="bg-zinc-900/60 rounded-xl border border-zinc-800 p-6 hover:border-zinc-700 transition-colors"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     {getStatusBadge(post.status)}
-                    <span className="text-sm text-zinc-500">
+                    <span className="text-sm text-zinc-400">
                       Created: {formatDate(post.created_at)}
                     </span>
                     {post.scheduled_at && (
-                      <span className="text-sm text-zinc-500">
+                      <span className="text-sm text-zinc-400">
                         Scheduled: {formatDate(post.scheduled_at)}
                       </span>
                     )}
                     {post.posted_at && (
-                      <span className="text-sm text-zinc-500">
+                      <span className="text-sm text-zinc-400">
                         Published: {formatDate(post.posted_at)}
                       </span>
                     )}
@@ -258,18 +258,18 @@ export default function HistoryPage() {
                   <img
                     src={post.media_url}
                     alt="Post media"
-                    className="max-w-xs rounded border border-zinc-200"
+                    className="max-w-xs rounded border border-zinc-800"
                   />
                 </div>
               )}
 
               <div className="mb-3">
-                <h3 className="font-semibold text-zinc-900 mb-1">Post Content</h3>
-                <p className="text-zinc-700 whitespace-pre-wrap">{post.content || 'N/A'}</p>
+                <h3 className="font-semibold text-zinc-200 mb-1">Post Content</h3>
+                <p className="text-zinc-300 whitespace-pre-wrap">{post.content || 'N/A'}</p>
               </div>
 
               {post.platform_post_id && (
-                <div className="mt-4 pt-4 border-t border-zinc-200">
+                <div className="mt-4 pt-4 border-t border-zinc-800">
                   <p className="text-sm text-zinc-500">
                     Post ID: {post.platform_post_id}
                   </p>

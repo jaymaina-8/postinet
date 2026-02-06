@@ -1,17 +1,5 @@
 import SettingsView from "@/components/dashboard/SettingsView";
 
-export default function ProfilePage() {
+export default function SettingsPage() {
   return <SettingsView />;
 }
-
-
-
-
-
-
-
-
-
-
-
-

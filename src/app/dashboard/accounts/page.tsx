@@ -300,22 +300,22 @@ function AccountsPageContent() {
   const platformsToShow: Platform[] = [PLATFORMS.FACEBOOK, PLATFORMS.YOUTUBE, PLATFORMS.INSTAGRAM];
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-zinc-900 mb-2">Connected Accounts</h1>
-        <p className="text-zinc-600">
-          Manage your connected social media accounts. Connect platforms to start publishing content.
+    <div className="max-w-5xl mx-auto py-8 space-y-6">
+      <div>
+        <h1 className="text-3xl font-semibold text-white">Social accounts</h1>
+        <p className="text-zinc-400">
+          Connect and secure your publishing destinations.
         </p>
       </div>
 
       {/* Success/Error Messages */}
       {success && (
-        <div className="mb-6 bg-green-100 border-2 border-green-400 rounded-lg p-4 shadow-md animate-pulse">
+        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4">
           <div className="flex items-center justify-between">
-            <p className="text-green-800 font-medium text-lg">{success}</p>
-            <button 
+            <p className="text-emerald-200 font-medium">{success}</p>
+            <button
               onClick={() => setSuccess(null)}
-              className="text-green-600 hover:text-green-800 ml-4"
+              className="text-emerald-200 hover:text-white"
             >
               ✕
             </button>
@@ -324,12 +324,12 @@ function AccountsPageContent() {
       )}
       
       {error && (
-        <div className="mb-6 bg-red-100 border-2 border-red-400 rounded-lg p-4 shadow-md">
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4">
           <div className="flex items-center justify-between">
-            <p className="text-red-800 font-medium">{error}</p>
-            <button 
+            <p className="text-rose-200 font-medium">{error}</p>
+            <button
               onClick={() => setError(null)}
-              className="text-red-600 hover:text-red-800 ml-4"
+              className="text-rose-200 hover:text-white"
             >
               ✕
             </button>
@@ -349,13 +349,13 @@ function AccountsPageContent() {
             return (
               <div
                 key={platform}
-                className={`bg-white border border-zinc-200 rounded-xl p-6 ${isInstagram ? 'opacity-60' : ''}`}
+                className={`border border-zinc-800 bg-zinc-900/60 rounded-xl p-6 ${isInstagram ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4">
                     {getPlatformIcon(platform)}
                     <div>
-                      <h3 className="text-lg font-semibold text-zinc-900">
+                      <h3 className="text-lg font-semibold text-white">
                         {PLATFORM_LABELS[platform]}
                       </h3>
                       
@@ -366,31 +366,34 @@ function AccountsPageContent() {
                           <div className="flex items-center gap-2">
                             {expired ? (
                               <>
-                                <span className="w-2 h-2 rounded-full bg-red-500" />
-                                <span className="text-sm text-red-600 font-medium">Token Expired</span>
+                                <span className="w-2 h-2 rounded-full bg-rose-400" />
+                                <span className="text-sm text-rose-300 font-medium">Token Expired</span>
                               </>
                             ) : (
                               <>
-                                <span className="w-2 h-2 rounded-full bg-green-500" />
-                                <span className="text-sm text-green-600 font-medium">Connected</span>
+                                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                                <span className="text-sm text-emerald-300 font-medium">Connected</span>
                               </>
                             )}
                           </div>
                           
                           {platform === PLATFORMS.FACEBOOK && account.facebook_page_name && (
-                            <p className="text-sm text-zinc-700">
-                              Page: <span className="font-medium">{account.facebook_page_name}</span>
+                            <p className="text-sm text-zinc-300">
+                              Page: <span className="font-medium text-zinc-100">{account.facebook_page_name}</span>
                             </p>
                           )}
                           
                           {platform === PLATFORMS.YOUTUBE && account.platform_username && (
-                            <p className="text-sm text-zinc-700">
-                              Channel: <span className="font-medium">{account.platform_username}</span>
+                            <p className="text-sm text-zinc-300">
+                              Channel: <span className="font-medium text-zinc-100">{account.platform_username}</span>
                             </p>
                           )}
                           
-                          <p className="text-xs text-zinc-400">
+                          <p className="text-xs text-zinc-500">
                             Connected on {new Date(account.created_at).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            Permissions: publish content, manage posts
                           </p>
                         </div>
                       ) : (
@@ -407,7 +410,7 @@ function AccountsPageContent() {
                             <button
                               onClick={() => handleConnect(platform)}
                               disabled={actionLoading === platform}
-                              className="px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                              className="px-4 py-2 bg-emerald-500 text-zinc-950 text-sm font-semibold rounded-lg hover:bg-emerald-400 transition-colors disabled:opacity-50"
                             >
                               {actionLoading === platform ? "Connecting..." : "Reconnect"}
                             </button>
@@ -415,7 +418,7 @@ function AccountsPageContent() {
                           <button
                             onClick={() => handleDisconnect(platform)}
                             disabled={actionLoading === platform}
-                            className="px-4 py-2 border border-zinc-300 text-zinc-700 text-sm font-medium rounded-lg hover:bg-zinc-50 transition-colors disabled:opacity-50"
+                            className="px-4 py-2 border border-zinc-700 text-zinc-200 text-sm font-semibold rounded-lg hover:border-zinc-500 transition-colors disabled:opacity-50"
                           >
                             {actionLoading === platform ? "..." : "Disconnect"}
                           </button>
@@ -424,7 +427,7 @@ function AccountsPageContent() {
                         <button
                           onClick={() => handleConnect(platform)}
                           disabled={actionLoading === platform}
-                          className="px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                          className="px-4 py-2 bg-emerald-500 text-zinc-950 text-sm font-semibold rounded-lg hover:bg-emerald-400 transition-colors disabled:opacity-50"
                         >
                           {actionLoading === platform ? "Connecting..." : "Connect"}
                         </button>
@@ -434,8 +437,8 @@ function AccountsPageContent() {
                 </div>
                 
                 {expired && account && (
-                  <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-sm text-red-700">
+                  <div className="mt-4 bg-rose-500/10 border border-rose-500/30 rounded-lg p-3">
+                    <p className="text-sm text-rose-200">
                       Your {PLATFORM_LABELS[platform]} token has expired. Please reconnect to continue posting.
                     </p>
                   </div>
@@ -447,9 +450,9 @@ function AccountsPageContent() {
       )}
 
       {/* Help Section */}
-      <div className="mt-12 bg-zinc-50 border border-zinc-200 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-zinc-900 mb-3">Need Help?</h3>
-        <div className="space-y-2 text-sm text-zinc-600">
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6">
+        <h3 className="text-lg font-semibold text-white mb-3">Security & control</h3>
+        <div className="space-y-2 text-sm text-zinc-400">
           <p>
             <strong>Facebook:</strong> You need a Facebook Page (not a personal profile) to publish content. 
             Make sure you are an admin of the page you want to connect.

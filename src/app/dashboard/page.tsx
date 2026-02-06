@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import supabase from "@/lib/supabaseClient";
@@ -21,7 +21,20 @@ interface UserStats {
   draftCount: number;
   scheduledCount: number;
   publishedCount: number;
+  failedCount: number;
+  publishedThisWeek: number;
+  scheduledUpcoming: number;
 }
+
+type RecentPost = {
+  id: string;
+  content: string | null;
+  media_url: string | null;
+  status: string | null;
+  scheduled_at: string | null;
+  posted_at: string | null;
+  created_at: string;
+};
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<UserStats>({
@@ -32,7 +45,11 @@ export default function DashboardPage() {
     draftCount: 0,
     scheduledCount: 0,
     publishedCount: 0,
+    failedCount: 0,
+    publishedThisWeek: 0,
+    scheduledUpcoming: 0,
   });
+  const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -88,7 +105,8 @@ export default function DashboardPage() {
       // Fetch posts stats
       const { data: posts, error: postsError } = await supabase
         .from("posts")
-        .select("scheduled_at, posted_at");
+        .select("id, content, media_url, status, scheduled_at, posted_at, created_at")
+        .order("created_at", { ascending: false });
 
       // Only log if there's a real error with a message
       if (postsError && postsError.message) {
@@ -98,6 +116,19 @@ export default function DashboardPage() {
       const drafts = posts?.filter((p) => !p.scheduled_at && !p.posted_at) || [];
       const scheduled = posts?.filter((p) => p.scheduled_at && !p.posted_at) || [];
       const published = posts?.filter((p) => p.posted_at) || [];
+      const failed = posts?.filter((p) => p.status === "failed") || [];
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      const publishedThisWeek = published.filter((p) => {
+        if (!p.posted_at) return false;
+        return new Date(p.posted_at) >= weekStart;
+      });
+      const scheduledUpcoming = scheduled.filter((p) => {
+        if (!p.scheduled_at) return false;
+        return new Date(p.scheduled_at) > now;
+      });
 
       setStats({
         hasConnectedAccounts: (accounts?.length || 0) > 0,
@@ -107,7 +138,11 @@ export default function DashboardPage() {
         draftCount: drafts.length,
         scheduledCount: scheduled.length,
         publishedCount: published.length,
+        failedCount: failed.length,
+        publishedThisWeek: publishedThisWeek.length,
+        scheduledUpcoming: scheduledUpcoming.length,
       });
+      setRecentPosts((posts || []).slice(0, 5));
     } catch (error) {
       console.error("Error fetching stats:", error);
     } finally {
@@ -124,247 +159,216 @@ export default function DashboardPage() {
 
   const currentStep = getCurrentStep();
 
+  const isEmpty = !loading && recentPosts.length === 0 && !stats.hasConnectedAccounts;
+
+  const statusStyles = useMemo(
+    () => ({
+      scheduled: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
+      published: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
+      failed: "bg-rose-500/20 text-rose-300 border border-rose-500/30",
+      draft: "bg-zinc-500/20 text-zinc-300 border border-zinc-500/30",
+    }),
+    []
+  );
+
+  function getStatusLabel(post: RecentPost) {
+    if (post.status === "failed") return "Failed";
+    if (post.posted_at) return "Published";
+    if (post.scheduled_at) return "Scheduled";
+    return "Draft";
+  }
+
   return (
     <div className="space-y-8">
-      {/* Welcome Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900 mb-2">Welcome to Postinet</h1>
-        <p className="text-zinc-600">
-          Your social media command center. Let&apos;s get you publishing!
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-semibold text-white">Welcome to Postinet</h1>
+        <p className="text-zinc-400">
+          Your multi-platform command center. Create once, schedule everywhere.
         </p>
       </div>
 
-      {/* Guided Steps */}
-      {!loading && currentStep < 4 && (
-        <Card className="border-2 border-emerald-200 bg-linear-to-br from-emerald-50 to-cyan-50">
-        <CardHeader>
-            <CardTitle className="text-emerald-800">
-              {currentStep === 1 && "Step 1: Connect Your Social Accounts"}
-              {currentStep === 2 && "Step 2: Create Your First Post"}
-              {currentStep === 3 && "Step 3: Publish or Schedule Your Content"}
-            </CardTitle>
-        </CardHeader>
-        <CardContent>
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                <p className="text-zinc-700">
-                  Connect your Facebook Page or YouTube channel to start publishing content.
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 border border-zinc-800 bg-zinc-900/60 p-0">
+          <CardContent className="p-6">
+            <div className="flex flex-col gap-6">
+              <div>
+                <p className="text-sm uppercase tracking-wide text-zinc-500">Primary Action</p>
+                <h2 className="text-2xl font-semibold text-white mt-2">Create a post</h2>
+                <p className="text-zinc-400 mt-2">
+                  Compose once and publish to your connected platforms in minutes.
                 </p>
-                <Link
-                  href="/dashboard/accounts"
-                  className="inline-flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                  </svg>
-                  Connect Account
-                </Link>
               </div>
-            )}
-
-            {currentStep === 2 && (
-              <div className="space-y-4">
-                <p className="text-zinc-700">
-                  Great! Your accounts are connected. Now let&apos;s create your first post.
-                </p>
+              <div className="flex flex-wrap gap-3">
                 <Link
                   href="/dashboard/generate"
-                  className="inline-flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                  className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-5 py-3 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Create Post
+                  Create a post
+                </Link>
+                <Link
+                  href="/dashboard/create"
+                  className="inline-flex items-center justify-center rounded-lg border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-200 hover:border-zinc-500 hover:text-white transition-colors"
+                >
+                  Upload media
+                </Link>
+                <Link
+                  href="/dashboard/calendar"
+                  className="inline-flex items-center justify-center rounded-lg border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-200 hover:border-zinc-500 hover:text-white transition-colors"
+                >
+                  Schedule content
                 </Link>
               </div>
-            )}
-
-            {currentStep === 3 && (
-              <div className="space-y-4">
-                <p className="text-zinc-700">
-                  You have {stats.draftCount} draft{stats.draftCount !== 1 ? 's' : ''} ready. 
-                  Publish now or schedule for later!
-                </p>
-                <div className="flex gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { label: "Create", href: "/dashboard/generate" },
+                  { label: "Schedule", href: "/dashboard/calendar" },
+                  { label: "Analytics", href: "/dashboard/analytics" },
+                  { label: "Accounts", href: "/dashboard/accounts" },
+                ].map((item) => (
                   <Link
-                    href="/dashboard/schedule"
-                    className="inline-flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                    key={item.label}
+                    href={item.href}
+                    className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm text-zinc-300 hover:border-zinc-700 hover:text-white transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Schedule Post
+                    {item.label}
                   </Link>
-                  <Link
-                    href="/dashboard/history"
-                    className="inline-flex items-center gap-2 border border-emerald-600 text-emerald-700 px-6 py-3 rounded-lg font-medium hover:bg-emerald-50 transition-colors"
-                  >
-                    View Drafts
-                  </Link>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-zinc-900">{stats.connectedPlatforms.length}</p>
-                <p className="text-sm text-zinc-500">Connected Accounts</p>
+                ))}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-zinc-900">{stats.draftCount}</p>
-                <p className="text-sm text-zinc-500">Drafts</p>
-              </div>
+        <Card className="border border-zinc-800 bg-zinc-900/60">
+          <CardHeader>
+            <CardTitle className="text-white">Quick Stats</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-400">Published this week</span>
+              <span className="text-white font-semibold">{stats.publishedThisWeek}</span>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-zinc-900">{stats.scheduledCount}</p>
-                <p className="text-sm text-zinc-500">Scheduled</p>
-              </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-400">Scheduled upcoming</span>
+              <span className="text-white font-semibold">{stats.scheduledUpcoming}</span>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-zinc-900">{stats.publishedCount}</p>
-                <p className="text-sm text-zinc-500">Published</p>
-              </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-400">Failed posts</span>
+              <Link href="/dashboard/history" className="text-rose-300 hover:text-rose-200 font-semibold">
+                {stats.failedCount}
+              </Link>
+            </div>
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-3 text-xs text-zinc-500">
+              Everything important is one click away.
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-xl font-semibold text-zinc-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link href="/dashboard/accounts" className="group">
-            <Card className="h-full hover:border-blue-300 transition-colors">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-zinc-900">Manage Accounts</h3>
-                    <p className="text-sm text-zinc-500 mt-1">Connect or manage your social platforms</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/dashboard/generate" className="group">
-            <Card className="h-full hover:border-emerald-300 transition-colors">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
-                    <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-zinc-900">Create Post</h3>
-                    <p className="text-sm text-zinc-500 mt-1">Create and schedule new content</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/dashboard/schedule" className="group">
-            <Card className="h-full hover:border-purple-300 transition-colors">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-zinc-900">Schedule Posts</h3>
-                    <p className="text-sm text-zinc-500 mt-1">Plan and schedule your content</p>
-                  </div>
-                </div>
-        </CardContent>
-      </Card>
-          </Link>
-        </div>
-      </div>
-
-      {/* Connected Platforms Status */}
-      {stats.hasConnectedAccounts && (
-        <div>
-          <h2 className="text-xl font-semibold text-zinc-900 mb-4">Connected Platforms</h2>
-          <div className="flex flex-wrap gap-3">
-            {stats.connectedPlatforms.includes(PLATFORMS.FACEBOOK) && (
-              <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-4 py-2">
-                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
-                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                </div>
-                <span className="text-sm font-medium text-blue-800">Facebook</span>
-                <span className="w-2 h-2 rounded-full bg-green-500" />
-              </div>
-            )}
-            {stats.connectedPlatforms.includes(PLATFORMS.YOUTUBE) && (
-              <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-4 py-2">
-                <div className="w-6 h-6 rounded-full bg-red-600 flex items-center justify-center">
-                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                  </svg>
-                </div>
-                <span className="text-sm font-medium text-red-800">YouTube</span>
-                <span className="w-2 h-2 rounded-full bg-green-500" />
-              </div>
-            )}
-          </div>
-        </div>
+      {isEmpty && (
+        <Card className="border border-zinc-800 bg-zinc-900/60">
+          <CardContent className="p-6 text-center">
+            <h3 className="text-lg font-semibold text-white">Get started in under 2 minutes</h3>
+            <p className="text-zinc-400 mt-2">
+              Connect a social account, upload media, and schedule your first post.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/dashboard/accounts"
+                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 transition-colors"
+              >
+                Connect account
+              </Link>
+              <Link
+                href="/dashboard/create"
+                className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 hover:border-zinc-500 hover:text-white transition-colors"
+              >
+                Upload media
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 border border-zinc-800 bg-zinc-900/60">
+          <CardHeader>
+            <CardTitle className="text-white">Recent activity</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {loading ? (
+              <div className="text-sm text-zinc-500">Loading recent posts...</div>
+            ) : recentPosts.length === 0 ? (
+              <div className="text-sm text-zinc-500">No posts yet. Create your first post to see activity here.</div>
+            ) : (
+              recentPosts.map((post) => {
+                const status = getStatusLabel(post).toLowerCase();
+                return (
+                  <div
+                    key={post.id}
+                    className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-zinc-800 flex items-center justify-center text-xs text-zinc-500">
+                        {post.media_url ? "Media" : "Text"}
+                      </div>
+                      <div>
+                        <p className="text-sm text-zinc-200 line-clamp-1">
+                          {post.content || "Untitled post"}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          {post.scheduled_at
+                            ? `Scheduled for ${new Date(post.scheduled_at).toLocaleString()}`
+                            : post.posted_at
+                            ? `Published on ${new Date(post.posted_at).toLocaleString()}`
+                            : `Created ${new Date(post.created_at).toLocaleDateString()}`}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusStyles[status as keyof typeof statusStyles]}`}>
+                      {getStatusLabel(post)}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border border-zinc-800 bg-zinc-900/60">
+          <CardHeader>
+            <CardTitle className="text-white">Platform status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-400">Connected accounts</span>
+              <span className="text-white font-semibold">{stats.connectedPlatforms.length}</span>
+            </div>
+            <div className="space-y-2">
+              {stats.connectedPlatforms.includes(PLATFORMS.FACEBOOK) && (
+                <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm">
+                  <span className="text-zinc-300">Facebook</span>
+                  <span className="text-emerald-400">Connected</span>
+                </div>
+              )}
+              {stats.connectedPlatforms.includes(PLATFORMS.YOUTUBE) && (
+                <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm">
+                  <span className="text-zinc-300">YouTube</span>
+                  <span className="text-emerald-400">Connected</span>
+                </div>
+              )}
+              {!stats.hasConnectedAccounts && (
+                <div className="text-sm text-zinc-500">No accounts connected yet.</div>
+              )}
+            </div>
+            <Link
+              href="/dashboard/accounts"
+              className="inline-flex items-center justify-center rounded-lg border border-zinc-800 px-4 py-2 text-sm text-zinc-200 hover:border-zinc-600 transition-colors"
+            >
+              Manage accounts
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
