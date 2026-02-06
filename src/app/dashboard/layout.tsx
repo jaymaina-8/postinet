@@ -109,6 +109,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <MobileSidebarDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)}>
             <Sidebar onNavigate={() => setMobileNavOpen(false)} />
           </MobileSidebarDrawer>
+          {/* Previous structure: PageContextBar lived inside main content. */}
           <main className="flex-1 overflow-auto px-4 py-6 sm:px-6 lg:px-8">
             <div className="sticky top-16 z-10 bg-zinc-950/80 pb-4 pt-2 backdrop-blur md:static md:pb-6">
               <PageContextBar />

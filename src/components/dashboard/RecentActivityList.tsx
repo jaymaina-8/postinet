@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type RecentPost = {
   id: string;
   content: string | null;
@@ -42,7 +44,10 @@ export default function RecentActivityList({
       </div>
       {showFailureHint && (
         <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
-          Some posts failed. Review and retry in History.
+          Some posts failed.{" "}
+          <Link href="/dashboard/history" className="font-semibold text-rose-100 hover:text-white">
+            Review and retry.
+          </Link>
         </div>
       )}
       {loading ? (

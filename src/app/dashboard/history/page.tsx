@@ -154,6 +154,7 @@ export default function HistoryPage() {
 
   return (
     <PageGate>
+      {/* Previous structure: filter tabs followed by full-width content cards. */}
       <div className="max-w-6xl mx-auto py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-semibold text-white mb-2">Content history</h1>
@@ -161,7 +162,7 @@ export default function HistoryPage() {
         </div>
 
       {/* Filters */}
-      <div className="mb-6 flex gap-2">
+      <div className="mb-6 flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('all')}
           className={`px-4 py-2 rounded text-sm font-medium ${
@@ -231,39 +232,39 @@ export default function HistoryPage() {
           {posts.map((post) => (
             <div
               key={post.id}
-              className="bg-zinc-900/60 rounded-xl border border-zinc-800 p-6 hover:border-zinc-700 transition-colors"
+              className="bg-zinc-900/60 rounded-xl border border-zinc-800 p-4 sm:p-5 hover:border-zinc-700 transition-colors"
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-                {getStatusBadge(post.status)}
-                <div className="flex flex-wrap gap-3 text-sm text-zinc-400">
-                  <span>Created: {formatDate(post.created_at)}</span>
-                  {post.scheduled_at && <span>Scheduled: {formatDate(post.scheduled_at)}</span>}
-                  {post.posted_at && <span>Published: {formatDate(post.posted_at)}</span>}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="h-16 w-20 shrink-0 rounded-lg bg-zinc-800 overflow-hidden flex items-center justify-center text-xs text-zinc-500">
+                    {post.media_url ? (
+                      <img
+                        src={post.media_url}
+                        alt="Post media"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      "Text"
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {getStatusBadge(post.status)}
+                      <span className="text-xs text-zinc-500">Created: {formatDate(post.created_at)}</span>
+                      {post.scheduled_at && (
+                        <span className="text-xs text-zinc-500">Scheduled: {formatDate(post.scheduled_at)}</span>
+                      )}
+                      {post.posted_at && (
+                        <span className="text-xs text-zinc-500">Published: {formatDate(post.posted_at)}</span>
+                      )}
+                    </div>
+                    <p className="text-zinc-100">{post.content || "Untitled post"}</p>
+                  </div>
                 </div>
+                {post.platform_post_id && (
+                  <div className="text-xs text-zinc-500">Post ID: {post.platform_post_id}</div>
+                )}
               </div>
-
-              {post.media_url && (
-                <div className="mb-4">
-                  <img
-                    src={post.media_url}
-                    alt="Post media"
-                    className="max-w-xs rounded border border-zinc-800"
-                  />
-                </div>
-              )}
-
-              <div className="mb-3">
-                <h3 className="font-semibold text-zinc-200 mb-1">Post Content</h3>
-                <p className="text-zinc-300 whitespace-pre-wrap">{post.content || 'N/A'}</p>
-              </div>
-
-              {post.platform_post_id && (
-                <div className="mt-4 pt-4 border-t border-zinc-800">
-                  <p className="text-sm text-zinc-500">
-                    Post ID: {post.platform_post_id}
-                  </p>
-                </div>
-              )}
             </div>
           ))}
         </div>

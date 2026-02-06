@@ -8,12 +8,12 @@ export default function EmptyStateHint({ variant }: EmptyStateHintProps) {
   const content =
     variant === "connect"
       ? {
-          title: "Connect a social account to start publishing.",
-          cta: "Connect platforms",
+          title: "Start by connecting Facebook to publish.",
+          cta: "Connect accounts",
           href: "/dashboard/accounts",
         }
       : {
-          title: "Upload your first asset to begin scheduling.",
+          title: "Upload your first post to see it here.",
           cta: "Upload media",
           href: "/dashboard/create",
         };

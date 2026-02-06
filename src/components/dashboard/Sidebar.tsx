@@ -30,8 +30,8 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    href: "/dashboard/calendar",
-    label: "Calendar",
+    href: "/dashboard/schedule",
+    label: "Schedule",
     icon: (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v3M16 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" />
@@ -39,11 +39,11 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    href: "/dashboard/analytics",
-    label: "Analytics",
+    href: "/dashboard/history",
+    label: "History",
     icon: (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 20h16M8 16v-5M12 16V8M16 16v-2" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h10" />
       </svg>
     ),
   },
@@ -53,15 +53,6 @@ const navItems: NavItem[] = [
     icon: (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M16 11a4 4 0 1 0-8 0M4 21a8 8 0 0 1 16 0" />
-      </svg>
-    ),
-  },
-  {
-    href: "/dashboard/assets",
-    label: "Assets",
-    icon: (
-      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M6 6v12a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V6" />
       </svg>
     ),
   },

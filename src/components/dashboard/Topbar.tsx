@@ -44,7 +44,9 @@ export default function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void })
           <span className="text-sm font-semibold tracking-[0.2em] text-zinc-200">POSTINET</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="hidden sm:inline text-xs text-zinc-400">{userEmail || "user@email.com"}</span>
+          <span className="max-w-[160px] truncate text-xs text-zinc-400">
+            {userEmail || "user@email.com"}
+          </span>
           <button
             type="button"
             onClick={handleLogout}

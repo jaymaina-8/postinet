@@ -159,25 +159,25 @@ export default function DashboardPage() {
   const showFailureHint = !loading && stats.failedCount > 0;
 
   return (
+    // Previous structure: dashboard mixed hero, quick links, stats, and activity with equal weight.
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-semibold text-white">Welcome back</h1>
-        <p className="text-zinc-400">Your creator-grade publishing hub.</p>
+        <h1 className="text-3xl font-semibold text-white">Welcome to Postinet</h1>
+        <p className="text-zinc-400">Upload once. Schedule or post instantly.</p>
       </div>
 
       <PrimaryActionCard />
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="flex flex-wrap gap-2">
         {[
-          { label: "Create", href: "/dashboard/create" },
-          { label: "Schedule", href: "/dashboard/calendar" },
-          { label: "Analytics", href: "/dashboard/analytics" },
-          { label: "Accounts", href: "/dashboard/accounts" },
+          { label: "View scheduled", href: "/dashboard/schedule" },
+          { label: "View history", href: "/dashboard/history" },
+          { label: "Manage accounts", href: "/dashboard/accounts" },
         ].map((item) => (
           <Link
             key={item.label}
             href={item.href}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm font-semibold text-zinc-200 hover:border-zinc-600 transition-colors"
+            className="rounded-full border border-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:border-zinc-600"
           >
             {item.label}
           </Link>
@@ -194,12 +194,12 @@ export default function DashboardPage() {
           showFailureHint={showFailureHint}
         />
         <div className="space-y-6">
+          <PlatformStatusCard connectedPlatforms={stats.connectedPlatforms} />
           <ThisWeekStats
             publishedThisWeek={stats.publishedThisWeek}
             scheduledUpcoming={stats.scheduledUpcoming}
             failedCount={stats.failedCount}
           />
-          <PlatformStatusCard connectedPlatforms={stats.connectedPlatforms} />
         </div>
       </div>
     </div>

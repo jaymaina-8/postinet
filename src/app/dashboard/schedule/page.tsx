@@ -136,11 +136,11 @@ export default function SchedulePage() {
             {scheduledPosts.map((scheduledPost) => (
               <div
                 key={scheduledPost.id}
-                className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-5"
+                className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 sm:p-5"
               >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-start gap-4">
-                    <div className="h-16 w-20 rounded-lg bg-zinc-800 overflow-hidden flex items-center justify-center text-xs text-zinc-500">
+                    <div className="h-16 w-20 shrink-0 rounded-lg bg-zinc-800 overflow-hidden flex items-center justify-center text-xs text-zinc-500">
                       {scheduledPost.posts?.media_url ? (
                         <img
                           src={scheduledPost.posts.media_url}
@@ -154,9 +154,7 @@ export default function SchedulePage() {
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         {getStatusBadge(scheduledPost.status === "pending" ? "scheduled" : scheduledPost.status)}
-                        <span className="text-xs text-zinc-500">
-                          Scheduled: {formatDate(scheduledPost.scheduled_at)}
-                        </span>
+                        <span className="text-xs text-zinc-500">Scheduled: {formatDate(scheduledPost.scheduled_at)}</span>
                       </div>
                       <p className="text-zinc-100">
                         {scheduledPost.posts?.content || "Untitled post"}
