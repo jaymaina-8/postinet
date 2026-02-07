@@ -17,7 +17,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   const { error } = await supabaseAdmin
-    .from("connected_accounts")
+    .from("platform_accounts")
     .delete()
     .match({ user_id: user.id, platform: PLATFORMS.YOUTUBE });
 

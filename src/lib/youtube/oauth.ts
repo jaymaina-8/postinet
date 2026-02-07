@@ -7,9 +7,17 @@
  * Validate that all required YouTube OAuth environment variables are set
  * @throws Error if any required environment variable is missing
  */
+function getYouTubeClientId(): string | undefined {
+  return process.env.GOOGLE_CLIENT_ID || process.env.YOUTUBE_CLIENT_ID;
+}
+
+function getYouTubeClientSecret(): string | undefined {
+  return process.env.GOOGLE_CLIENT_SECRET || process.env.YOUTUBE_CLIENT_SECRET;
+}
+
 export function validateYouTubeEnv(): void {
-  const clientId = process.env.YOUTUBE_CLIENT_ID;
-  const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
+  const clientId = getYouTubeClientId();
+  const clientSecret = getYouTubeClientSecret();
   const redirectUri = process.env.YOUTUBE_REDIRECT_URI;
 
   const missing: string[] = [];
@@ -47,12 +55,6 @@ export interface YouTubeErrorResponse {
   error_description?: string;
 }
 
-export interface YouTubeProfileResponse {
-  id: string;
-  name: string;
-  picture?: string;
-  email?: string;
-}
 
 /**
  * Required scopes for YouTube API
@@ -60,7 +62,6 @@ export interface YouTubeProfileResponse {
 export const YOUTUBE_SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube.readonly',
-  'https://www.googleapis.com/auth/userinfo.profile',
 ].join(' ');
 
 /**
@@ -68,11 +69,14 @@ export const YOUTUBE_SCOPES = [
  * @param redirectUri - The callback URL where Google will redirect after authorization
  * @returns YouTube OAuth authorization URL
  */
-export function getYouTubeAuthUrl(redirectUri: string): string {
-  const clientId = process.env.YOUTUBE_CLIENT_ID;
-  
+export function getYouTubeAuthUrl(
+  redirectUri: string,
+  options?: { state?: string; codeChallenge?: string }
+): string {
+  const clientId = getYouTubeClientId();
+
   if (!clientId) {
-    throw new Error('YOUTUBE_CLIENT_ID environment variable is not set');
+    throw new Error('GOOGLE_CLIENT_ID or YOUTUBE_CLIENT_ID environment variable is not set');
   }
 
   const baseUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -84,6 +88,15 @@ export function getYouTubeAuthUrl(redirectUri: string): string {
     access_type: 'offline',
     prompt: 'consent',
   });
+
+  if (options?.state) {
+    params.set('state', options.state);
+  }
+
+  if (options?.codeChallenge) {
+    params.set('code_challenge', options.codeChallenge);
+    params.set('code_challenge_method', 'S256');
+  }
 
   return `${baseUrl}?${params.toString()}`;
 }
@@ -97,17 +110,18 @@ export function getYouTubeAuthUrl(redirectUri: string): string {
  */
 export async function exchangeYouTubeCode(
   code: string,
-  redirectUri: string
+  redirectUri: string,
+  codeVerifier?: string
 ): Promise<YouTubeTokenResponse> {
-  const clientId = process.env.YOUTUBE_CLIENT_ID;
-  const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
+  const clientId = getYouTubeClientId();
+  const clientSecret = getYouTubeClientSecret();
 
   if (!clientId) {
-    throw new Error('YOUTUBE_CLIENT_ID environment variable is not set');
+    throw new Error('GOOGLE_CLIENT_ID or YOUTUBE_CLIENT_ID environment variable is not set');
   }
 
   if (!clientSecret) {
-    throw new Error('YOUTUBE_CLIENT_SECRET environment variable is not set');
+    throw new Error('GOOGLE_CLIENT_SECRET or YOUTUBE_CLIENT_SECRET environment variable is not set');
   }
 
   const tokenUrl = 'https://oauth2.googleapis.com/token';
@@ -118,6 +132,10 @@ export async function exchangeYouTubeCode(
     redirect_uri: redirectUri,
     grant_type: 'authorization_code',
   });
+
+  if (codeVerifier) {
+    params.set('code_verifier', codeVerifier);
+  }
 
   const response = await fetch(tokenUrl, {
     method: 'POST',
@@ -161,72 +179,6 @@ export async function exchangeYouTubeCode(
  * @returns Profile data including id, name, and picture
  * @throws Error if profile fetch fails
  */
-export async function getYouTubeProfile(
-  accessToken: string
-): Promise<YouTubeProfileResponse> {
-  const profileUrl = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json';
-  
-  const response = await fetch(profileUrl, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Accept': 'application/json',
-    },
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || data.error) {
-    throw new Error(
-      data.error?.message || `Failed to fetch YouTube profile: ${response.statusText}`
-    );
-  }
-
-  const profileData = data as YouTubeProfileResponse;
-
-  if (!profileData.id || !profileData.name) {
-    throw new Error('YouTube profile response missing required fields');
-  }
-
-  return profileData;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

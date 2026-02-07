@@ -9,7 +9,7 @@ import { PLATFORMS } from "@/lib/platforms";
 
 type ConnectedAccount = {
   id: string;
-  platform_username: string | null;
+  display_name: string | null;
   created_at: string;
 };
 
@@ -24,10 +24,10 @@ export default function ConnectYouTubeCard() {
     fetchConnection();
     
     // Check for OAuth callback results
-    const youtubeConnected = searchParams.get('youtube_connected');
+    const youtubeConnected = searchParams.get('youtube');
     const youtubeError = searchParams.get('youtube_error');
     
-    if (youtubeConnected === 'true') {
+    if (youtubeConnected === 'connected') {
       // Refresh connection status after successful OAuth
       fetchConnection();
       // Clear the URL parameter
@@ -58,15 +58,15 @@ export default function ConnectYouTubeCard() {
       let accountData = null;
       
       const result = await supabase
-        .from("connected_accounts")
-        .select("id, platform_username, created_at")
+        .from("platform_accounts")
+        .select("id, display_name, created_at")
         .eq("platform", PLATFORMS.YOUTUBE)
         .maybeSingle();
 
       if (result.error && result.error.message?.includes("does not exist")) {
         // Fallback: try with only basic columns
         const fallbackResult = await supabase
-          .from("connected_accounts")
+          .from("platform_accounts")
           .select("id, created_at")
           .eq("platform", PLATFORMS.YOUTUBE)
           .maybeSingle();
@@ -74,7 +74,7 @@ export default function ConnectYouTubeCard() {
         if (fallbackResult.data) {
           accountData = {
             ...fallbackResult.data,
-            platform_username: null,
+            display_name: null,
           };
         }
       } else if (result.error && result.error.code !== "PGRST116" && result.error.message) {
@@ -163,7 +163,7 @@ export default function ConnectYouTubeCard() {
         ) : account ? (
           <div className="space-y-3">
             <p className="text-sm text-zinc-600">
-              Connected{account.platform_username ? ` as ${account.platform_username}` : ""}.
+              Connected{account.display_name ? ` as ${account.display_name}` : ""}.
             </p>
             <Button variant="outline" onClick={handleDisconnect} disabled={actionLoading}>
               {actionLoading ? "Disconnecting..." : "Disconnect"}

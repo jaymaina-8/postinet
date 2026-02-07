@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { getYouTubeAuthUrl, validateYouTubeEnv } from '@/lib/youtube/oauth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -40,8 +41,30 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ url: authUrl });
     }
 
-    const authUrl = getYouTubeAuthUrl(redirectUri);
-    return NextResponse.json({ url: authUrl });
+    const codeVerifier = crypto.randomBytes(64).toString('base64url');
+    const codeChallenge = crypto
+      .createHash('sha256')
+      .update(codeVerifier)
+      .digest('base64url');
+    const state = crypto.randomBytes(16).toString('base64url');
+
+    const authUrl = getYouTubeAuthUrl(redirectUri, {
+      state,
+      codeChallenge,
+    });
+
+    const response = NextResponse.json({ url: authUrl });
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      path: '/api/youtube/exchange',
+      maxAge: 60 * 10,
+    };
+
+    response.cookies.set('youtube_oauth_state', state, cookieOptions);
+    response.cookies.set('youtube_oauth_verifier', codeVerifier, cookieOptions);
+    return response;
   } catch (error: any) {
     console.error('Error generating YouTube OAuth URL:', error);
     return NextResponse.json(

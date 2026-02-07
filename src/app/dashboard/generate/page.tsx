@@ -17,7 +17,7 @@ const allowedTypes = [
 ];
 
 export default function CreateContentPage() {
-  const { selectedPage } = usePageScope();
+  const { selectedAccount } = usePageScope();
   const searchParams = useSearchParams();
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -55,14 +55,25 @@ export default function CreateContentPage() {
     async function fetchConnectedPlatforms() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      const result = await supabase
-        .from("connected_accounts")
-        .select("platform, facebook_page_access_token")
-        .eq("user_id", session.user.id);
-      if (result.error) return;
-      const platforms = (result.data || [])
-        .filter((acc) => (acc.platform === PLATFORMS.FACEBOOK ? acc.facebook_page_access_token != null : true))
-        .map((acc) => acc.platform);
+      const [facebookResult, youtubeResult] = await Promise.all([
+        supabase
+          .from("connected_accounts")
+          .select("platform, facebook_page_access_token")
+          .eq("user_id", session.user.id),
+        supabase
+          .from("platform_accounts")
+          .select("platform")
+          .eq("user_id", session.user.id)
+          .eq("platform", PLATFORMS.YOUTUBE),
+      ]);
+
+      if (facebookResult.error || youtubeResult.error) return;
+      const platforms = [
+        ...(facebookResult.data || [])
+          .filter((acc) => (acc.platform === PLATFORMS.FACEBOOK ? acc.facebook_page_access_token != null : true))
+          .map((acc) => acc.platform),
+        ...(youtubeResult.data || []).map((acc) => acc.platform),
+      ];
       setConnectedPlatforms(platforms);
     }
     fetchConnectedPlatforms();
@@ -152,7 +163,7 @@ export default function CreateContentPage() {
   };
 
   const createDraftPost = async (mediaUrl: string | null) => {
-    if (!selectedPage) {
+    if (!selectedAccount || selectedAccount.platform !== PLATFORMS.FACEBOOK) {
       throw new Error("Please select a Facebook Page first.");
     }
 
@@ -168,7 +179,7 @@ export default function CreateContentPage() {
         content: content.trim() || null,
         media_url: mediaUrl,
         platform: PLATFORMS.FACEBOOK,
-        platform_account_id: selectedPage.pageId,
+        platform_account_id: selectedAccount.accountId,
         status: "draft",
         scheduled_at: null,
         posted_at: null,
@@ -252,7 +263,7 @@ export default function CreateContentPage() {
             posted_at: new Date().toISOString(),
             platform_post_id: published.postId || null,
             platform: PLATFORMS.FACEBOOK,
-            platform_account_id: selectedPage?.pageId,
+            platform_account_id: selectedAccount?.accountId,
             status: "published",
           })
           .eq("id", post.id);

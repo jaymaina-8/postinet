@@ -28,7 +28,7 @@ function AccountsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const facebookConnected = searchParams.get("facebook") === "connected";
-  const youtubeConnected = searchParams.get("youtube_connected");
+  const youtubeConnected = searchParams.get("youtube");
   const facebookError = searchParams.get("facebook_error");
   const youtubeError = searchParams.get("youtube_error");
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
@@ -58,43 +58,49 @@ function AccountsPageContent() {
         return;
       }
 
-      // Try fetching with all columns first, fall back to basic columns if some don't exist
-      let accountsData = null;
+      let accountsData: ConnectedAccount[] = [];
       let accountsError = null;
 
-      // First try with all columns
-      // For Facebook, only show accounts with facebook_page_access_token
-      const result = await supabase
-        .from("connected_accounts")
-        .select("id, platform, platform_username, facebook_page_name, facebook_page_access_token, created_at, expires_at")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false });
-
-      if (result.error && result.error.message?.includes("does not exist")) {
-        // Fallback: try with only basic columns
-        const fallbackResult = await supabase
+      const [facebookResult, youtubeResult] = await Promise.all([
+        supabase
           .from("connected_accounts")
-          .select("id, platform, created_at")
+          .select("id, platform, platform_username, facebook_page_name, facebook_page_access_token, created_at, expires_at")
           .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
-        
-        accountsData = fallbackResult.data?.map(acc => ({
-          ...acc,
-          platform_username: null,
-          facebook_page_name: null,
-          expires_at: null,
-        })) || [];
-        accountsError = fallbackResult.error;
-      } else {
-        // Filter Facebook accounts to only show those with facebook_page_access_token
-        accountsData = (result.data || []).filter(acc => {
-          if (acc.platform === PLATFORMS.FACEBOOK) {
-            return acc.facebook_page_access_token != null;
-          }
-          return true;
-        });
-        accountsError = result.error;
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("platform_accounts")
+          .select("id, platform, display_name, created_at, token_expires_at")
+          .eq("user_id", session.user.id)
+          .eq("platform", PLATFORMS.YOUTUBE)
+          .order("created_at", { ascending: false }),
+      ]);
+
+      if (facebookResult.error && !facebookResult.error.message?.includes("does not exist")) {
+        accountsError = facebookResult.error;
       }
+
+      if (youtubeResult.error && !youtubeResult.error.message?.includes("does not exist")) {
+        accountsError = youtubeResult.error;
+      }
+
+      const facebookAccounts = (facebookResult.data || []).filter(acc => {
+        if (acc.platform === PLATFORMS.FACEBOOK) {
+          return acc.facebook_page_access_token != null;
+        }
+        return true;
+      }) as ConnectedAccount[];
+
+      const youtubeAccounts = (youtubeResult.data || []).map(acc => ({
+        id: acc.id,
+        platform: PLATFORMS.YOUTUBE,
+        platform_username: acc.display_name || null,
+        facebook_page_name: null,
+        facebook_page_access_token: null,
+        created_at: acc.created_at,
+        expires_at: acc.token_expires_at ? new Date(acc.token_expires_at).getTime() : null,
+      })) as ConnectedAccount[];
+
+      accountsData = [...facebookAccounts, ...youtubeAccounts];
 
       // Check if error exists AND has meaningful content
       if (accountsError && accountsError.message) {
@@ -129,7 +135,7 @@ function AccountsPageContent() {
         window.history.replaceState({}, '', window.location.pathname);
       }, 1500);
       return () => clearTimeout(retryTimeout);
-    } else if (youtubeConnected === 'true') {
+    } else if (youtubeConnected === 'connected') {
       setSuccess('🎉 YouTube channel connected successfully!');
       setTimeout(() => {
         fetchAccounts();

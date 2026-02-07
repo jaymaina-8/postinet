@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
-import { exchangeYouTubeCode, validateYouTubeEnv, getYouTubeProfile } from '@/lib/youtube/oauth';
+import { exchangeYouTubeCode, validateYouTubeEnv } from '@/lib/youtube/oauth';
+import { fetchYouTubeChannel } from '@/lib/youtube/client';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 /**
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
     const code = searchParams.get('code');
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
+    const state = searchParams.get('state');
 
     // Handle OAuth errors from Google
     if (error) {
@@ -50,10 +52,25 @@ export async function GET(req: NextRequest) {
       console.warn('YOUTUBE_REDIRECT_URI not set, using fallback:', redirectUri);
     }
 
+    const storedState = req.cookies.get('youtube_oauth_state')?.value;
+    const codeVerifier = req.cookies.get('youtube_oauth_verifier')?.value;
+
+    if (!storedState || !state || storedState !== state) {
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('youtube_error', 'Invalid OAuth state. Please try again.');
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    if (!codeVerifier) {
+      const dashboardUrl = new URL('/dashboard/accounts', appUrl);
+      dashboardUrl.searchParams.set('youtube_error', 'Missing OAuth verifier. Please try again.');
+      return NextResponse.redirect(dashboardUrl);
+    }
+
     // Exchange code for access token
     let tokenResponse;
     try {
-      tokenResponse = await exchangeYouTubeCode(code, redirectUri);
+      tokenResponse = await exchangeYouTubeCode(code, redirectUri, codeVerifier);
     } catch (tokenError: any) {
       console.error('Token exchange error:', tokenError);
       const dashboardUrl = new URL('/dashboard/accounts', appUrl);
@@ -79,56 +96,43 @@ export async function GET(req: NextRequest) {
       : null;
 
     // Get user's YouTube profile info
-    let platformUserId: string | null = null;
-    let platformUsername: string | null = null;
+    const channelInfo = await fetchYouTubeChannel(tokenResponse.access_token);
 
-    try {
-      const profileData = await getYouTubeProfile(tokenResponse.access_token);
-      platformUserId = profileData.id || null;
-      platformUsername = profileData.name || null;
-    } catch (profileError) {
-      // Non-critical error - we can still store the token without profile info
-      console.warn('Failed to fetch YouTube profile:', profileError);
-    }
-
-    // Store or update the connection in the database
-    const { data: existingConnection } = await supabaseAdmin
-      .from('connected_accounts')
-      .select('id')
+    const { data: existingAccount } = await supabaseAdmin
+      .from('platform_accounts')
+      .select('id, refresh_token')
       .eq('user_id', user.id)
       .eq('platform', PLATFORMS.YOUTUBE)
-      .single();
+      .eq('platform_account_id', channelInfo.id)
+      .maybeSingle();
 
-    if (existingConnection) {
-      // Update existing connection
+    const refreshToken = tokenResponse.refresh_token || existingAccount?.refresh_token;
+    if (!refreshToken) {
+      throw new Error('Missing YouTube refresh token. Please re-authorize and grant consent.');
+    }
+
+    const payload = {
+      user_id: user.id,
+      platform: PLATFORMS.YOUTUBE,
+      platform_account_id: channelInfo.id,
+      display_name: channelInfo.title,
+      refresh_token: refreshToken,
+      access_token: tokenResponse.access_token,
+      token_expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+    };
+
+    if (existingAccount) {
       const { error: updateError } = await supabaseAdmin
-        .from('connected_accounts')
-        .update({
-          access_token: tokenResponse.access_token,
-          refresh_token: tokenResponse.refresh_token,
-          expires_at: expiresAt,
-          platform_user_id: platformUserId,
-          platform_username: platformUsername,
-        })
-        .eq('id', existingConnection.id);
-
+        .from('platform_accounts')
+        .update(payload)
+        .eq('id', existingAccount.id);
       if (updateError) {
         throw updateError;
       }
     } else {
-      // Create new connection
       const { error: insertError } = await supabaseAdmin
-        .from('connected_accounts')
-        .insert({
-          user_id: user.id,
-          platform: PLATFORMS.YOUTUBE,
-          access_token: tokenResponse.access_token,
-          refresh_token: tokenResponse.refresh_token,
-          expires_at: expiresAt,
-          platform_user_id: platformUserId,
-          platform_username: platformUsername,
-        });
-
+        .from('platform_accounts')
+        .insert(payload);
       if (insertError) {
         throw insertError;
       }
@@ -136,8 +140,11 @@ export async function GET(req: NextRequest) {
 
     // Redirect to accounts page with success parameter
     const dashboardUrl = new URL('/dashboard/accounts', appUrl);
-    dashboardUrl.searchParams.set('youtube_connected', 'true');
-    return NextResponse.redirect(dashboardUrl);
+    dashboardUrl.searchParams.set('youtube', 'connected');
+    const response = NextResponse.redirect(dashboardUrl);
+    response.cookies.set('youtube_oauth_state', '', { path: '/api/youtube/exchange', maxAge: 0 });
+    response.cookies.set('youtube_oauth_verifier', '', { path: '/api/youtube/exchange', maxAge: 0 });
+    return response;
   } catch (error: any) {
     console.error('YouTube OAuth exchange error:', error);
     const dashboardUrl = new URL('/dashboard/accounts', process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin);
