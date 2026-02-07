@@ -4,32 +4,37 @@ import React, { useEffect, useState } from 'react';
 import supabase from '@/lib/supabaseClient';
 import { formatError } from '@/lib/utils';
 import { PageGate, usePageScope } from '@/components/PageScope';
+import { PLATFORMS } from '@/lib/platforms';
 
 interface Post {
   id: string;
   content: string | null;
+  title?: string | null;
   media_url: string | null;
+  platform: string | null;
   ai_caption: string | null;
   ai_hashtags: string | null;
   scheduled_at: string | null;
   posted_at: string | null;
   platform_post_id: string | null;
+  provider_post_id: string | null;
+  error_message?: string | null;
   metrics: any;
   created_at: string;
-  status: 'draft' | 'scheduled' | 'published' | 'failed';
+  status: 'draft' | 'scheduled' | 'published' | 'failed' | 'cancelled' | 'publishing' | 'uploading';
 }
 
 export default function HistoryPage() {
-  const { selectedPage } = usePageScope();
+  const { selectedAccount } = usePageScope();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'draft' | 'scheduled' | 'published' | 'failed'>('all');
 
   useEffect(() => {
-    if (selectedPage) {
+    if (selectedAccount) {
       fetchPosts();
     }
-  }, [filter, selectedPage]);
+  }, [filter, selectedAccount]);
 
   async function fetchPosts() {
     try {
@@ -45,8 +50,9 @@ export default function HistoryPage() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (selectedPage?.pageId) {
-        query = query.eq('platform_account_id', selectedPage.pageId);
+      if (selectedAccount?.accountId) {
+        query = query.eq('platform_account_id', selectedAccount.accountId);
+        query = query.eq('platform', selectedAccount.platform);
       }
 
       // Apply filter
@@ -75,8 +81,11 @@ export default function HistoryPage() {
         // Add default values for missing columns
         const postsWithDefaults = (allData || [])
           .filter((post) => {
-            if (!selectedPage?.pageId) return true;
-            return post.platform_account_id === selectedPage.pageId;
+            if (!selectedAccount?.accountId) return true;
+            return (
+              post.platform_account_id === selectedAccount.accountId &&
+              post.platform === selectedAccount.platform
+            );
           })
           .map(post => ({
             ...post,
@@ -85,9 +94,15 @@ export default function HistoryPage() {
           }));
         
         const postsWithStatus = postsWithDefaults.map(post => {
-          let status: 'draft' | 'scheduled' | 'published' | 'failed' = 'draft';
+          let status: 'draft' | 'scheduled' | 'published' | 'failed' | 'cancelled' | 'publishing' | 'uploading' = 'draft';
           if (post.status === 'failed') {
             status = 'failed';
+          } else if (post.status === 'cancelled') {
+            status = 'cancelled';
+          } else if (post.status === 'publishing') {
+            status = 'publishing';
+          } else if (post.status === 'uploading') {
+            status = 'uploading';
           } else if (post.posted_at) {
             status = 'published';
           } else if (post.scheduled_at) {
@@ -106,9 +121,15 @@ export default function HistoryPage() {
 
       // Add status to each post
       const postsWithStatus = (data || []).map(post => {
-        let status: 'draft' | 'scheduled' | 'published' | 'failed' = 'draft';
+        let status: 'draft' | 'scheduled' | 'published' | 'failed' | 'cancelled' | 'publishing' | 'uploading' = 'draft';
         if (post.status === 'failed') {
           status = 'failed';
+        } else if (post.status === 'cancelled') {
+          status = 'cancelled';
+        } else if (post.status === 'publishing') {
+          status = 'publishing';
+        } else if (post.status === 'uploading') {
+          status = 'uploading';
         } else if (post.posted_at) {
           status = 'published';
         } else if (post.scheduled_at) {
@@ -143,11 +164,26 @@ export default function HistoryPage() {
         published: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
         failed: 'bg-rose-500/20 text-rose-300 border border-rose-500/30',
         cancelled: 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/30',
+        publishing: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+        uploading: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
       };
 
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium ${styles[status as keyof typeof styles] || styles.draft}`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
+      </span>
+    );
+  }
+
+  function getPlatformBadge(platform: string | null) {
+    const styles = {
+      facebook: 'bg-blue-500/20 text-blue-200 border border-blue-500/30',
+      youtube: 'bg-red-500/20 text-red-200 border border-red-500/30',
+    };
+    const key = platform || 'facebook';
+    return (
+      <span className={`px-2 py-1 rounded text-xs font-medium ${styles[key as keyof typeof styles] || styles.facebook}`}>
+        {key.charAt(0).toUpperCase() + key.slice(1)}
       </span>
     );
   }
@@ -249,6 +285,7 @@ export default function HistoryPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
+                      {getPlatformBadge(post.platform)}
                       {getStatusBadge(post.status)}
                       <span className="text-xs text-zinc-500">Created: {formatDate(post.created_at)}</span>
                       {post.scheduled_at && (
@@ -258,11 +295,29 @@ export default function HistoryPage() {
                         <span className="text-xs text-zinc-500">Published: {formatDate(post.posted_at)}</span>
                       )}
                     </div>
-                    <p className="text-zinc-100">{post.content || "Untitled post"}</p>
+                    <p className="text-zinc-100">{post.title || post.content || "Untitled post"}</p>
+                    {post.status === "failed" && (
+                      <p className="text-sm text-rose-300">
+                        {post.error_message || "Failed to publish. Please review your connection and try again."}
+                      </p>
+                    )}
                   </div>
                 </div>
-                {post.platform_post_id && (
-                  <div className="text-xs text-zinc-500">Post ID: {post.platform_post_id}</div>
+                {(post.provider_post_id || post.platform_post_id) && (
+                  <div className="text-xs text-zinc-500">
+                    {post.platform === PLATFORMS.YOUTUBE && post.provider_post_id ? (
+                      <a
+                        href={`https://www.youtube.com/watch?v=${post.provider_post_id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-emerald-300 hover:underline"
+                      >
+                        View on YouTube
+                      </a>
+                    ) : (
+                      <>Post ID: {post.provider_post_id || post.platform_post_id}</>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

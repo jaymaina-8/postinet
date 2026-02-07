@@ -4,21 +4,16 @@ import React, { useEffect, useState } from "react";
 import supabase from "@/lib/supabaseClient";
 import { PageGate, usePageScope } from "@/components/PageScope";
 
-interface Post {
-  id: string;
-  content: string | null;
-  media_url: string | null;
-}
-
 interface ScheduledPost {
   id: string;
-  post_id: string;
   scheduled_at: string;
   status: string;
   platform: string;
   platform_account_id: string | null;
   error_message?: string | null;
-  posts: Post;
+  content: string | null;
+  title: string | null;
+  media_url: string | null;
 }
 
 function formatDate(dateString: string) {
@@ -31,6 +26,8 @@ function getStatusBadge(status: string) {
     scheduled: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
     published: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
     cancelled: "bg-zinc-500/20 text-zinc-300 border border-zinc-500/30",
+    publishing: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
+    uploading: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
   };
 
   return (
@@ -40,16 +37,28 @@ function getStatusBadge(status: string) {
   );
 }
 
+function getPlatformBadge(platform: string) {
+  const styles = {
+    facebook: "bg-blue-500/20 text-blue-200 border border-blue-500/30",
+    youtube: "bg-red-500/20 text-red-200 border border-red-500/30",
+  };
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${styles[platform as keyof typeof styles] || styles.facebook}`}>
+      {platform?.charAt(0).toUpperCase() + platform?.slice(1)}
+    </span>
+  );
+}
+
 export default function SchedulePage() {
-  const { selectedPage } = usePageScope();
+  const { selectedAccount } = usePageScope();
   const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (selectedPage) {
+    if (selectedAccount) {
       fetchScheduledPosts();
     }
-  }, [selectedPage]);
+  }, [selectedAccount]);
 
   async function fetchScheduledPosts() {
     try {
@@ -64,8 +73,12 @@ export default function SchedulePage() {
       if (res.ok) {
         const data = await res.json();
         const allPosts = data.scheduledPosts || [];
-        const filtered = selectedPage
-          ? allPosts.filter((post: ScheduledPost) => post.platform_account_id === selectedPage.pageId)
+        const filtered = selectedAccount
+          ? allPosts.filter(
+              (post: ScheduledPost) =>
+                post.platform === selectedAccount.platform &&
+                post.platform_account_id === selectedAccount.accountId
+            )
           : allPosts;
         setScheduledPosts(filtered);
       } else {
@@ -141,9 +154,9 @@ export default function SchedulePage() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-start gap-4">
                     <div className="h-16 w-20 shrink-0 rounded-lg bg-zinc-800 overflow-hidden flex items-center justify-center text-xs text-zinc-500">
-                      {scheduledPost.posts?.media_url ? (
+                      {scheduledPost.media_url ? (
                         <img
-                          src={scheduledPost.posts.media_url}
+                          src={scheduledPost.media_url}
                           alt="Post media"
                           className="h-full w-full object-cover"
                         />
@@ -153,11 +166,12 @@ export default function SchedulePage() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
+                        {getPlatformBadge(scheduledPost.platform)}
                         {getStatusBadge(scheduledPost.status === "pending" ? "scheduled" : scheduledPost.status)}
                         <span className="text-xs text-zinc-500">Scheduled: {formatDate(scheduledPost.scheduled_at)}</span>
                       </div>
                       <p className="text-zinc-100">
-                        {scheduledPost.posts?.content || "Untitled post"}
+                        {scheduledPost.title || scheduledPost.content || "Untitled post"}
                       </p>
                       {scheduledPost.status === "failed" && (
                         <p className="text-sm text-rose-300">
