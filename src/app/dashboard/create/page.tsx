@@ -1,29 +1,59 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
+import { PLATFORMS } from "@/lib/platforms";
+import { PageGate, usePageScope } from "@/components/PageScope";
 
-const allowedTypes = [
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-];
+const imageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const videoTypes = ["video/mp4", "video/webm", "video/quicktime"];
 
-export default function UploadPage() {
+type PostMode = "now" | "schedule";
+
+export default function CreatePage() {
+  const router = useRouter();
+  const { selectedAccount } = usePageScope();
+  const isYouTube = selectedAccount?.platform === PLATFORMS.YOUTUBE;
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("private");
+  const [caption, setCaption] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
+  const [postMode, setPostMode] = useState<PostMode>("now");
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const allowedTypes = useMemo(
+    () => (isYouTube ? videoTypes : [...imageTypes, ...videoTypes]),
+    [isYouTube]
+  );
+
+  useEffect(() => {
+    if (scheduledDate && scheduledTime) return;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    if (!scheduledDate) setScheduledDate(tomorrow.toISOString().split("T")[0]);
+    if (!scheduledTime) setScheduledTime("09:00");
+  }, [scheduledDate, scheduledTime]);
+
+  const timezone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+    []
+  );
 
   const handleFileChange = (selectedFile: File | null) => {
     if (!selectedFile) return;
     if (!allowedTypes.includes(selectedFile.type)) {
-      setError("Unsupported file type. Please upload an image or video.");
+      setError(isYouTube ? "Unsupported file type. Please upload a video." : "Unsupported file type.");
       setFile(null);
       setUploadedMediaUrl(null);
       return;
@@ -84,6 +114,7 @@ export default function UploadPage() {
     const { data: publicUrlData } = supabase.storage.from("content").getPublicUrl(fileName);
     setUploadedMediaUrl(publicUrlData.publicUrl);
     setUploading(false);
+    return publicUrlData.publicUrl;
   };
 
   const handleUploadClick = async () => {
@@ -96,106 +127,375 @@ export default function UploadPage() {
     }
   };
 
+  const createDraftPost = async (mediaUrl: string | null) => {
+    if (!selectedAccount) {
+      throw new Error("Please select a destination first.");
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error("Please log in to create a post.");
+    }
+
+    const mediaType = file?.type?.startsWith("video/") || mediaUrl?.match(/\.(mp4|mov|webm|mkv|avi|m4v)(\?|#|$)/i)
+      ? "video"
+      : mediaUrl
+      ? "image"
+      : null;
+
+    const payload = {
+      user_id: session.user.id,
+      content: isYouTube ? null : caption.trim() || null,
+      media_url: mediaUrl,
+      media_type: mediaType,
+      title: isYouTube ? title.trim() : null,
+      description: isYouTube ? description.trim() || null : null,
+      visibility: isYouTube ? visibility : null,
+      platform: selectedAccount.platform,
+      platform_account_id: selectedAccount.accountId,
+      status: "draft",
+      scheduled_at: null,
+      published_at: null,
+      published_once: false,
+    };
+
+    const { data, error: insertError } = await supabase
+      .from("posts")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (insertError || !data) {
+      throw new Error(insertError?.message || "Failed to save post.");
+    }
+
+    return data;
+  };
+
+  const validateSchedule = () => {
+    if (!scheduledDate || !scheduledTime) {
+      throw new Error("Please choose a date and time for scheduling.");
+    }
+    const scheduledAtDate = new Date(`${scheduledDate}T${scheduledTime}`);
+    const minScheduleTime = Date.now() + 2 * 60 * 1000;
+    if (Number.isNaN(scheduledAtDate.getTime()) || scheduledAtDate.getTime() < minScheduleTime) {
+      throw new Error("Scheduled time must be at least 2 minutes in the future.");
+    }
+    return scheduledAtDate.toISOString();
+  };
+
+  const handleSubmit = async (mode: PostMode) => {
+    if (!selectedAccount) {
+      setError("Select a destination before publishing.");
+      return;
+    }
+
+    if (isYouTube) {
+      if (!title.trim()) {
+        setError("Title is required for YouTube.");
+        return;
+      }
+      if (!file && !uploadedMediaUrl) {
+        setError("Please upload a video.");
+        return;
+      }
+    } else if (!caption.trim() && !file && !uploadedMediaUrl) {
+      setError("Please add a caption or upload media.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      let mediaUrl = uploadedMediaUrl;
+      if (file && !uploadedMediaUrl) {
+        mediaUrl = await uploadMedia();
+      }
+
+      const post = await createDraftPost(mediaUrl || null);
+
+      if (mode === "schedule") {
+        const scheduledAt = validateSchedule();
+        const res = await fetch("/api/schedule", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            postId: post.id,
+            scheduledAt,
+            platform: selectedAccount.platform,
+          }),
+        });
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Failed to schedule post.");
+        }
+
+        setSuccess("Post scheduled successfully.");
+        router.push("/dashboard/schedule");
+        return;
+      }
+
+      if (isYouTube) {
+        await supabase
+          .from("posts")
+          .update({ status: "publishing" })
+          .eq("id", post.id);
+
+        const res = await fetch("/api/youtube/post", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ postId: post.id }),
+        });
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Failed to publish YouTube video.");
+        }
+
+        setSuccess("Video published successfully.");
+      } else {
+        const res = await fetch("/api/facebook/post", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: caption.trim() || null,
+            imageUrl: mediaUrl || null,
+          }),
+        });
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          await supabase
+            .from("posts")
+            .update({ status: "failed" })
+            .eq("id", post.id);
+          throw new Error(body.error || "Failed to publish post.");
+        }
+
+        const published = await res.json();
+        await supabase
+          .from("posts")
+          .update({
+            posted_at: new Date().toISOString(),
+            published_at: new Date().toISOString(),
+            platform_post_id: published.postId || null,
+            provider_post_id: published.postId || null,
+            platform: PLATFORMS.FACEBOOK,
+            platform_account_id: selectedAccount.accountId,
+            status: "published",
+            published_once: true,
+          })
+          .eq("id", post.id);
+
+        setSuccess("Post published successfully.");
+      }
+
+      setTitle("");
+      setDescription("");
+      setVisibility("private");
+      setCaption("");
+      setFile(null);
+      setUploadedMediaUrl(null);
+      setUploadProgress(0);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <div className="max-w-5xl mx-auto py-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-white">Upload media</h1>
-        <p className="text-zinc-400 mt-2">Add assets once. Reuse everywhere.</p>
-      </div>
+    <PageGate>
+      <div className="max-w-6xl mx-auto py-8 space-y-6">
+        <div>
+          <h1 className="text-3xl font-semibold text-white">Create post</h1>
+          <p className="text-zinc-400">Upload once, publish exactly once.</p>
+        </div>
 
-      <div id="upload" className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-12 text-center scroll-mt-24">
-        <div className="mx-auto flex max-w-md flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-300">
-            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0 4 4m-4-4-4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">Drag & drop your file</h2>
-            <p className="text-sm text-zinc-400">Video and image assets up to your plan limit.</p>
-          </div>
-          <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 transition-colors">
-            Browse files
-            <input
-              type="file"
-              accept="image/*,video/*"
-              className="hidden"
-              onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
-              disabled={uploading}
-            />
-          </label>
-          <p className="text-xs text-zinc-500">Supported: JPG, PNG, GIF, WEBP, MP4, WEBM, MOV</p>
-        </div>
-      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-6">
+            {isYouTube ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Title</label>
+                  <input
+                    className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    placeholder="Video title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Description (optional)</label>
+                  <textarea
+                    className="w-full min-h-[120px] rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    placeholder="Add a short description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Visibility</label>
+                  <select
+                    className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+                    value={visibility}
+                    onChange={(e) => setVisibility(e.target.value as "public" | "unlisted" | "private")}
+                  >
+                    <option value="public">Public</option>
+                    <option value="unlisted">Unlisted</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">Caption</label>
+                <textarea
+                  className="w-full min-h-[160px] rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  placeholder="Write your post..."
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                />
+              </div>
+            )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-          <p className="text-sm font-semibold text-white">Local upload</p>
-          <p className="text-xs text-zinc-500 mt-1">Drag & drop or browse files</p>
-        </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 opacity-60">
-          <p className="text-sm font-semibold text-white">Cloud storage</p>
-          <p className="text-xs text-zinc-500 mt-1">Drive, Dropbox, and more (soon)</p>
-        </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 opacity-60">
-          <p className="text-sm font-semibold text-white">Text uploads</p>
-          <p className="text-xs text-zinc-500 mt-1">Import scripts and notes (soon)</p>
-        </div>
-      </div>
-
-      {file && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
-          <div className="flex items-center justify-between text-sm text-zinc-400">
-            <span>{file.name}</span>
-            <span>{uploadedMediaUrl ? "Uploaded" : "Ready to upload"}</span>
-          </div>
-          {!uploadedMediaUrl && (
-            <button
-              type="button"
-              onClick={handleUploadClick}
-              disabled={uploading}
-              className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-white transition-colors disabled:opacity-50"
-            >
-              {uploading ? "Uploading..." : "Upload media"}
-            </button>
-          )}
-          {uploading && (
-            <div className="w-full bg-zinc-800 rounded-full h-2">
-              <div
-                className="bg-emerald-500 h-2 rounded-full transition-all"
-                style={{ width: `${uploadProgress}%` }}
-              />
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-2">
+                {isYouTube ? "Video" : "Media"}
+              </label>
+              <div className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950 px-4 py-4">
+                <div className="flex flex-col gap-3">
+                  <input
+                    type="file"
+                    accept={isYouTube ? "video/*" : "image/*,video/*"}
+                    onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+                    className="w-full text-sm text-zinc-400"
+                    disabled={uploading || submitting}
+                  />
+                  {(file || uploadedMediaUrl) && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-zinc-500">
+                        <span>{file?.name || "Uploaded asset"}</span>
+                        {uploadedMediaUrl ? <span className="text-emerald-400">Ready</span> : null}
+                      </div>
+                      {!uploadedMediaUrl && (
+                        <button
+                          type="button"
+                          onClick={handleUploadClick}
+                          disabled={uploading}
+                          className="text-sm bg-zinc-100 text-zinc-900 px-3 py-1 rounded hover:bg-white transition-colors disabled:opacity-50"
+                        >
+                          {uploading ? "Uploading..." : "Upload Media"}
+                        </button>
+                      )}
+                      {uploading && (
+                        <div className="w-full bg-zinc-800 rounded-full h-2">
+                          <div
+                            className="bg-emerald-500 h-2 rounded-full transition-all"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          )}
-          {uploadedMediaUrl && (
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-zinc-300">Schedule</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPostMode("now")}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      postMode === "now"
+                        ? "bg-emerald-500 text-zinc-950"
+                        : "border border-zinc-800 text-zinc-300"
+                    }`}
+                  >
+                    Post now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostMode("schedule")}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      postMode === "schedule"
+                        ? "bg-emerald-500 text-zinc-950"
+                        : "border border-zinc-800 text-zinc-300"
+                    }`}
+                  >
+                    Schedule
+                  </button>
+                </div>
+              </div>
+              {postMode === "schedule" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-2">Date</label>
+                    <input
+                      type="date"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-2">Time</label>
+                    <input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="text-xs text-zinc-500">Timezone: {timezone}</div>
+            </div>
+
+            {error && (
+              <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                {success}
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-3">
-              <a
-                href={`/dashboard/generate?mediaUrl=${encodeURIComponent(uploadedMediaUrl)}`}
-                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 transition-colors"
-              >
-                Continue to composer
-              </a>
               <button
-                type="button"
-                className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 hover:border-zinc-500 transition-colors"
-                onClick={() => {
-                  setFile(null);
-                  setUploadedMediaUrl(null);
-                  setUploadProgress(0);
-                }}
+                className="flex-1 bg-emerald-500 text-zinc-950 rounded-lg px-6 py-3 hover:bg-emerald-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                onClick={() => handleSubmit(postMode)}
+                disabled={submitting || uploading}
               >
-                Upload another file
+                {submitting ? (postMode === "schedule" ? "Scheduling..." : "Publishing...") : postMode === "schedule" ? "Schedule" : "Post now"}
               </button>
             </div>
-          )}
-        </div>
-      )}
+          </div>
 
-      {error && (
-        <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-          {error}
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Destination</h3>
+              <p className="text-sm text-zinc-400">
+                {selectedAccount?.name} · {selectedAccount?.platform === PLATFORMS.FACEBOOK ? "Facebook" : "YouTube"}
+              </p>
+            </div>
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
+              {uploadedMediaUrl ? "Media ready" : "No media uploaded"} ·{" "}
+              {isYouTube ? (title ? "Title set" : "Title missing") : caption ? "Caption added" : "Caption missing"}
+            </div>
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </PageGate>
   );
 }
