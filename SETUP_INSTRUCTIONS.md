@@ -70,9 +70,9 @@ FACEBOOK_APP_SECRET=your_facebook_app_secret
 FACEBOOK_REDIRECT_URI=http://localhost:3000/api/facebook/exchange
 
 # YouTube OAuth
-YOUTUBE_CLIENT_ID=your_youtube_client_id
-YOUTUBE_CLIENT_SECRET=your_youtube_client_secret
-YOUTUBE_REDIRECT_URI=http://localhost:3000/api/youtube/exchange
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 # OpenAI (for content generation)
 OPENAI_API_KEY=your_openai_api_key

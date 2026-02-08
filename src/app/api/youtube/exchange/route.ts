@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
-import { exchangeYouTubeCode, validateYouTubeEnv } from '@/lib/youtube/oauth';
+import { validateYouTubeEnv } from '@/lib/youtube/oauth';
 import { fetchYouTubeChannel } from '@/lib/youtube/client';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -18,8 +18,6 @@ export async function GET(req: NextRequest) {
     const code = searchParams.get('code');
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
-    const state = searchParams.get('state');
-
     // Handle OAuth errors from Google
     if (error) {
       console.error('YouTube OAuth error:', { error, errorDescription });
@@ -44,39 +42,60 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(dashboardUrl);
     }
 
-    // Get redirect URI from environment or construct from request
-    let redirectUri = process.env.YOUTUBE_REDIRECT_URI;
-    if (!redirectUri) {
-      // Fallback: construct from app URL
-      redirectUri = `${appUrl}/api/youtube/exchange`;
-      console.warn('YOUTUBE_REDIRECT_URI not set, using fallback:', redirectUri);
-    }
+    const redirectUri = `${appUrl}/api/youtube/exchange`;
+    const hasClientId = Boolean(process.env.GOOGLE_CLIENT_ID);
+    const hasClientSecret = Boolean(process.env.GOOGLE_CLIENT_SECRET);
+    console.log('[YouTube OAuth] redirect_uri=', redirectUri);
+    console.log('[YouTube OAuth] env GOOGLE_CLIENT_ID set?', hasClientId);
+    console.log('[YouTube OAuth] env GOOGLE_CLIENT_SECRET set?', hasClientSecret);
 
-    const storedState = req.cookies.get('youtube_oauth_state')?.value;
-    const codeVerifier = req.cookies.get('youtube_oauth_verifier')?.value;
-
-    if (!storedState || !state || storedState !== state) {
+    if (!hasClientId || !hasClientSecret) {
       const dashboardUrl = new URL('/dashboard/accounts', appUrl);
-      dashboardUrl.searchParams.set('youtube_error', 'Invalid OAuth state. Please try again.');
+      dashboardUrl.searchParams.set('youtube_error', 'unauthorized');
       return NextResponse.redirect(dashboardUrl);
     }
 
-    if (!codeVerifier) {
+    const tokenUrl = 'https://oauth2.googleapis.com/token';
+    const params = new URLSearchParams({
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID || '',
+      client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    });
+
+    const tokenResponse = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+      },
+      body: params.toString(),
+    });
+
+    const tokenData = await tokenResponse.json().catch(() => ({}));
+    if (!tokenResponse.ok) {
+      console.error('[YouTube OAuth] token exchange failed', {
+        status: tokenResponse.status,
+        body: tokenData,
+      });
       const dashboardUrl = new URL('/dashboard/accounts', appUrl);
-      dashboardUrl.searchParams.set('youtube_error', 'Missing OAuth verifier. Please try again.');
+      dashboardUrl.searchParams.set('youtube_error', 'unauthorized');
       return NextResponse.redirect(dashboardUrl);
     }
 
-    // Exchange code for access token
-    let tokenResponse;
-    try {
-      tokenResponse = await exchangeYouTubeCode(code, redirectUri, codeVerifier);
-    } catch (tokenError: any) {
-      console.error('Token exchange error:', tokenError);
+    if (!tokenData?.access_token) {
+      console.error('[YouTube OAuth] token response missing access_token', tokenData);
       const dashboardUrl = new URL('/dashboard/accounts', appUrl);
-      dashboardUrl.searchParams.set('youtube_error', `Failed to exchange authorization code: ${tokenError.message}`);
+      dashboardUrl.searchParams.set('youtube_error', 'unauthorized');
       return NextResponse.redirect(dashboardUrl);
     }
+
+    const tokenResponseData = tokenData as {
+      access_token: string;
+      refresh_token?: string;
+      expires_in?: number;
+    };
 
     // Get user from Supabase session cookies (no Authorization header / no manual cookie parsing)
     const supabase = await createSupabaseServerClient();
@@ -91,12 +110,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Calculate expiration timestamp
-    const expiresAt = tokenResponse.expires_in
-      ? Date.now() + tokenResponse.expires_in * 1000
+    const expiresAt = tokenResponseData.expires_in
+      ? Date.now() + tokenResponseData.expires_in * 1000
       : null;
 
     // Get user's YouTube profile info
-    const channelInfo = await fetchYouTubeChannel(tokenResponse.access_token);
+    const channelInfo = await fetchYouTubeChannel(tokenResponseData.access_token);
 
     const { data: existingAccount } = await supabaseAdmin
       .from('platform_accounts')
@@ -106,7 +125,7 @@ export async function GET(req: NextRequest) {
       .eq('platform_account_id', channelInfo.id)
       .maybeSingle();
 
-    const refreshToken = tokenResponse.refresh_token || existingAccount?.refresh_token;
+    const refreshToken = tokenResponseData.refresh_token || existingAccount?.refresh_token;
     if (!refreshToken) {
       throw new Error('Missing YouTube refresh token. Please re-authorize and grant consent.');
     }
@@ -117,7 +136,7 @@ export async function GET(req: NextRequest) {
       platform_account_id: channelInfo.id,
       display_name: channelInfo.title,
       refresh_token: refreshToken,
-      access_token: tokenResponse.access_token,
+      access_token: tokenResponseData.access_token,
       token_expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
     };
 
@@ -141,14 +160,11 @@ export async function GET(req: NextRequest) {
     // Redirect to accounts page with success parameter
     const dashboardUrl = new URL('/dashboard/accounts', appUrl);
     dashboardUrl.searchParams.set('youtube', 'connected');
-    const response = NextResponse.redirect(dashboardUrl);
-    response.cookies.set('youtube_oauth_state', '', { path: '/api/youtube/exchange', maxAge: 0 });
-    response.cookies.set('youtube_oauth_verifier', '', { path: '/api/youtube/exchange', maxAge: 0 });
-    return response;
+    return NextResponse.redirect(dashboardUrl);
   } catch (error: any) {
     console.error('YouTube OAuth exchange error:', error);
     const dashboardUrl = new URL('/dashboard/accounts', process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin);
-    dashboardUrl.searchParams.set('youtube_error', error.message || 'Failed to complete YouTube OAuth');
+    dashboardUrl.searchParams.set('youtube_error', 'unauthorized');
     return NextResponse.redirect(dashboardUrl);
   }
 }

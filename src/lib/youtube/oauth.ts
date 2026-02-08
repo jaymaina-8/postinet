@@ -1,37 +1,30 @@
 /**
  * YouTube OAuth helper functions
- * Handles OAuth URL generation and token exchange
+ * Web Application OAuth flow, server-side code exchange with client_secret;
+ * redirect URI must match Google Console exactly.
  */
 
 /**
  * Validate that all required YouTube OAuth environment variables are set
  * @throws Error if any required environment variable is missing
  */
-function getYouTubeClientId(): string | undefined {
-  return process.env.GOOGLE_CLIENT_ID || process.env.YOUTUBE_CLIENT_ID;
-}
-
-function getYouTubeClientSecret(): string | undefined {
-  return process.env.GOOGLE_CLIENT_SECRET || process.env.YOUTUBE_CLIENT_SECRET;
-}
-
 export function validateYouTubeEnv(): void {
-  const clientId = getYouTubeClientId();
-  const clientSecret = getYouTubeClientSecret();
-  const redirectUri = process.env.YOUTUBE_REDIRECT_URI;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
   const missing: string[] = [];
 
   if (!clientId) {
-    missing.push('YOUTUBE_CLIENT_ID');
+    missing.push('GOOGLE_CLIENT_ID');
   }
 
   if (!clientSecret) {
-    missing.push('YOUTUBE_CLIENT_SECRET');
+    missing.push('GOOGLE_CLIENT_SECRET');
   }
 
-  if (!redirectUri) {
-    missing.push('YOUTUBE_REDIRECT_URI');
+  if (!appUrl) {
+    missing.push('NEXT_PUBLIC_APP_URL');
   }
 
   if (missing.length > 0) {
@@ -69,14 +62,11 @@ export const YOUTUBE_SCOPES = [
  * @param redirectUri - The callback URL where Google will redirect after authorization
  * @returns YouTube OAuth authorization URL
  */
-export function getYouTubeAuthUrl(
-  redirectUri: string,
-  options?: { state?: string; codeChallenge?: string }
-): string {
-  const clientId = getYouTubeClientId();
+export function getYouTubeAuthUrl(redirectUri: string): string {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
 
   if (!clientId) {
-    throw new Error('GOOGLE_CLIENT_ID or YOUTUBE_CLIENT_ID environment variable is not set');
+    throw new Error('GOOGLE_CLIENT_ID environment variable is not set');
   }
 
   const baseUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -89,15 +79,6 @@ export function getYouTubeAuthUrl(
     prompt: 'consent',
   });
 
-  if (options?.state) {
-    params.set('state', options.state);
-  }
-
-  if (options?.codeChallenge) {
-    params.set('code_challenge', options.codeChallenge);
-    params.set('code_challenge_method', 'S256');
-  }
-
   return `${baseUrl}?${params.toString()}`;
 }
 
@@ -108,71 +89,6 @@ export function getYouTubeAuthUrl(
  * @returns Token response with access_token, refresh_token, and expires_in
  * @throws Error if token exchange fails
  */
-export async function exchangeYouTubeCode(
-  code: string,
-  redirectUri: string,
-  codeVerifier?: string
-): Promise<YouTubeTokenResponse> {
-  const clientId = getYouTubeClientId();
-  const clientSecret = getYouTubeClientSecret();
-
-  if (!clientId) {
-    throw new Error('GOOGLE_CLIENT_ID or YOUTUBE_CLIENT_ID environment variable is not set');
-  }
-
-  if (!clientSecret) {
-    throw new Error('GOOGLE_CLIENT_SECRET or YOUTUBE_CLIENT_SECRET environment variable is not set');
-  }
-
-  const tokenUrl = 'https://oauth2.googleapis.com/token';
-  const params = new URLSearchParams({
-    code: code,
-    client_id: clientId,
-    client_secret: clientSecret,
-    redirect_uri: redirectUri,
-    grant_type: 'authorization_code',
-  });
-
-  if (codeVerifier) {
-    params.set('code_verifier', codeVerifier);
-  }
-
-  const response = await fetch(tokenUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Accept': 'application/json',
-    },
-    body: params.toString(),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || data.error) {
-    const error = data as YouTubeErrorResponse;
-    throw new Error(
-      error.error_description || error.error || `YouTube token exchange failed: ${response.statusText}`
-    );
-  }
-
-  const tokenData = data as YouTubeTokenResponse;
-
-  // Validate required fields
-  if (!tokenData.access_token) {
-    throw new Error('YouTube token response missing access_token');
-  }
-
-  if (!tokenData.refresh_token) {
-    throw new Error('YouTube token response missing refresh_token');
-  }
-
-  if (typeof tokenData.expires_in !== 'number') {
-    throw new Error('YouTube token response missing or invalid expires_in');
-  }
-
-  return tokenData;
-}
-
 /**
  * Fetch YouTube user profile information
  * @param accessToken - The access token to use for authentication
