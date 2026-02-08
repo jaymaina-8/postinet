@@ -43,8 +43,10 @@ export async function GET(req: NextRequest) {
     }
 
     const redirectUri = `${appUrl}/api/youtube/exchange`;
-    const hasClientId = Boolean(process.env.GOOGLE_CLIENT_ID);
-    const hasClientSecret = Boolean(process.env.GOOGLE_CLIENT_SECRET);
+    const clientId = process.env.GOOGLE_CLIENT_ID?.trim() || '';
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim() || '';
+    const hasClientId = Boolean(clientId);
+    const hasClientSecret = Boolean(clientSecret);
     console.log('[YouTube OAuth] redirect_uri=', redirectUri);
     console.log('[YouTube OAuth] env GOOGLE_CLIENT_ID set?', hasClientId);
     console.log('[YouTube OAuth] env GOOGLE_CLIENT_SECRET set?', hasClientSecret);
@@ -58,8 +60,8 @@ export async function GET(req: NextRequest) {
     const tokenUrl = 'https://oauth2.googleapis.com/token';
     const params = new URLSearchParams({
       code,
-      client_id: process.env.GOOGLE_CLIENT_ID || '',
-      client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+      client_id: clientId,
+      client_secret: clientSecret,
       redirect_uri: redirectUri,
       grant_type: 'authorization_code',
     });

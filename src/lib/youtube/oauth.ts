@@ -9,9 +9,9 @@
  * @throws Error if any required environment variable is missing
  */
 export function validateYouTubeEnv(): void {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
 
   const missing: string[] = [];
 
@@ -63,7 +63,7 @@ export const YOUTUBE_SCOPES = [
  * @returns YouTube OAuth authorization URL
  */
 export function getYouTubeAuthUrl(redirectUri: string): string {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
 
   if (!clientId) {
     throw new Error('GOOGLE_CLIENT_ID environment variable is not set');

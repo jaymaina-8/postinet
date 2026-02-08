@@ -11,11 +11,11 @@ export type YouTubeChannelInfo = {
 };
 
 function getYouTubeClientId(): string | undefined {
-  return process.env.GOOGLE_CLIENT_ID;
+  return process.env.GOOGLE_CLIENT_ID?.trim();
 }
 
 function getYouTubeClientSecret(): string | undefined {
-  return process.env.GOOGLE_CLIENT_SECRET;
+  return process.env.GOOGLE_CLIENT_SECRET?.trim();
 }
 
 export async function refreshYouTubeAccessToken(refreshToken: string) {
