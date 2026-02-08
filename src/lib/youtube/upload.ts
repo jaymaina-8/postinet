@@ -70,6 +70,7 @@ export async function uploadYouTubeVideo(input: UploadInput): Promise<UploadResu
       ...(contentLength ? { 'Content-Length': contentLength } : {}),
     },
     body: stream,
+    duplex: 'half',
   });
 
   const result = await uploadResponse.json().catch(() => ({}));
