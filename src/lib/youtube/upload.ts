@@ -62,7 +62,9 @@ export async function uploadYouTubeVideo(input: UploadInput): Promise<UploadResu
 
   const { stream, contentLength, contentType } = await fetchMediaStream(input.mediaUrl);
 
-  const uploadResponse = await fetch(uploadUrl, {
+  const uploadResponse = await fetch(
+    uploadUrl,
+    {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${input.accessToken}`,
@@ -71,7 +73,8 @@ export async function uploadYouTubeVideo(input: UploadInput): Promise<UploadResu
     },
     body: stream,
     duplex: 'half',
-  });
+    } as RequestInit & { duplex: 'half' }
+  );
 
   const result = await uploadResponse.json().catch(() => ({}));
   if (!uploadResponse.ok) {
