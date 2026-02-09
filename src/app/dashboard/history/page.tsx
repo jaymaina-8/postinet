@@ -18,6 +18,10 @@ interface Post {
   posted_at: string | null;
   platform_post_id: string | null;
   provider_post_id: string | null;
+  youtube_video_id?: string | null;
+  yt_processing_status?: string | null;
+  yt_upload_status?: string | null;
+  yt_failure_reason?: string | null;
   error_message?: string | null;
   metrics: any;
   created_at: string;
@@ -296,6 +300,14 @@ export default function HistoryPage() {
                       )}
                     </div>
                     <p className="text-zinc-100">{post.title || post.content || "Untitled post"}</p>
+                    {post.platform === "youtube" &&
+                      post.yt_processing_status &&
+                      ["processing", "uploaded"].includes(post.yt_processing_status) && (
+                        <p className="text-sm text-blue-300">Processing on YouTube…</p>
+                      )}
+                    {post.platform === "youtube" && post.yt_failure_reason && (
+                      <p className="text-sm text-rose-300">{post.yt_failure_reason}</p>
+                    )}
                     {post.status === "failed" && (
                       <p className="text-sm text-rose-300">
                         {post.error_message || "Failed to publish. Please review your connection and try again."}
@@ -306,14 +318,26 @@ export default function HistoryPage() {
                 {(post.provider_post_id || post.platform_post_id) && (
                   <div className="text-xs text-zinc-500">
                     {post.platform === PLATFORMS.YOUTUBE && post.provider_post_id ? (
-                      <a
-                        href={`https://www.youtube.com/watch?v=${post.provider_post_id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-emerald-300 hover:underline"
-                      >
-                        View on YouTube
-                      </a>
+                      <div className="flex flex-col gap-1">
+                        <a
+                          href={`https://www.youtube.com/watch?v=${post.provider_post_id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-300 hover:underline"
+                        >
+                          View on YouTube
+                        </a>
+                        {post.youtube_video_id && (
+                          <a
+                            href={`https://studio.youtube.com/video/${post.youtube_video_id}/edit`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-emerald-300 hover:underline"
+                          >
+                            Open in YouTube Studio
+                          </a>
+                        )}
+                      </div>
                     ) : (
                       <>Post ID: {post.provider_post_id || post.platform_post_id}</>
                     )}

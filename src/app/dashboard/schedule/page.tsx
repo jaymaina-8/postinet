@@ -14,6 +14,10 @@ interface ScheduledPost {
   content: string | null;
   title: string | null;
   media_url: string | null;
+  youtube_video_id?: string | null;
+  yt_processing_status?: string | null;
+  yt_upload_status?: string | null;
+  yt_failure_reason?: string | null;
 }
 
 function formatDate(dateString: string) {
@@ -173,6 +177,14 @@ export default function SchedulePage() {
                       <p className="text-zinc-100">
                         {scheduledPost.title || scheduledPost.content || "Untitled post"}
                       </p>
+                      {scheduledPost.platform === "youtube" &&
+                        scheduledPost.yt_processing_status &&
+                        ["processing", "uploaded"].includes(scheduledPost.yt_processing_status) && (
+                          <p className="text-sm text-blue-300">Processing on YouTube…</p>
+                        )}
+                      {scheduledPost.platform === "youtube" && scheduledPost.yt_failure_reason && (
+                        <p className="text-sm text-rose-300">{scheduledPost.yt_failure_reason}</p>
+                      )}
                       {scheduledPost.status === "failed" && (
                         <p className="text-sm text-rose-300">
                           {scheduledPost.error_message || "Failed to publish. Please review your connection and try again."}
@@ -180,6 +192,16 @@ export default function SchedulePage() {
                       )}
                     </div>
                   </div>
+                  {scheduledPost.youtube_video_id && (
+                    <a
+                      href={`https://studio.youtube.com/video/${scheduledPost.youtube_video_id}/edit`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-emerald-300 hover:underline"
+                    >
+                      Open in YouTube Studio
+                    </a>
+                  )}
                   {scheduledPost.status === "scheduled" && (
                     <button
                       onClick={() => handleCancelSchedule(scheduledPost.id)}
