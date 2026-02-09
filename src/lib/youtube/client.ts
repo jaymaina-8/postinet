@@ -10,6 +10,16 @@ export type YouTubeChannelInfo = {
   title: string;
 };
 
+export type YouTubeVideoStatus = {
+  uploadStatus: string | null;
+  processingStatus: string | null;
+  processingFailureReason: string | null;
+  rejectionReason: string | null;
+  title: string | null;
+  privacyStatus: string | null;
+  duration: string | null;
+};
+
 function getYouTubeClientId(): string | undefined {
   return process.env.GOOGLE_CLIENT_ID?.trim();
 }
@@ -84,5 +94,44 @@ export async function fetchYouTubeChannel(accessToken: string): Promise<YouTubeC
   return {
     id: channel.id,
     title: channel?.snippet?.title || 'YouTube Channel',
+  };
+}
+
+export async function fetchYouTubeVideoStatus(
+  accessToken: string,
+  videoId: string
+): Promise<YouTubeVideoStatus> {
+  const response = await fetch(
+    `https://www.googleapis.com/youtube/v3/videos?part=processingDetails,status,snippet,contentDetails&id=${encodeURIComponent(
+      videoId
+    )}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.error?.message || 'Failed to fetch YouTube video status');
+  }
+
+  const video = data?.items?.[0];
+  if (!video) {
+    throw new Error('YouTube video not found');
+  }
+
+  return {
+    uploadStatus: video?.status?.uploadStatus || null,
+    processingStatus: video?.processingDetails?.processingStatus || null,
+    processingFailureReason: video?.processingDetails?.processingFailureReason || null,
+    rejectionReason: video?.status?.rejectionReason || null,
+    title: video?.snippet?.title || null,
+    privacyStatus: video?.status?.privacyStatus || null,
+    duration: video?.contentDetails?.duration || null,
   };
 }

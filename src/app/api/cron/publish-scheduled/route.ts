@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { PLATFORMS } from '@/lib/platforms';
 import { postToFacebook } from '@/lib/facebook/postToFacebook';
-import { refreshYouTubeAccessToken } from '@/lib/youtube/client';
+import { fetchYouTubeVideoStatus, refreshYouTubeAccessToken } from '@/lib/youtube/client';
 import { uploadYouTubeVideo } from '@/lib/youtube/upload';
 
 /**
@@ -328,16 +328,40 @@ export async function POST(request: Request) {
           mediaUrl: scheduledPost.media_url,
         });
 
+        const videoStatus = await fetchYouTubeVideoStatus(accessToken, uploadResult.videoId);
+        const failureReason =
+          videoStatus.processingFailureReason || videoStatus.rejectionReason || null;
+        const isProcessingFailed =
+          videoStatus.processingStatus === 'failed' ||
+          videoStatus.processingStatus === 'terminated' ||
+          videoStatus.uploadStatus === 'failed' ||
+          videoStatus.uploadStatus === 'rejected';
+        const isProcessingSucceeded =
+          videoStatus.processingStatus === 'succeeded' &&
+          videoStatus.uploadStatus !== 'rejected' &&
+          videoStatus.uploadStatus !== 'failed';
+
+        const nextStatus = isProcessingFailed
+          ? 'failed'
+          : isProcessingSucceeded
+          ? 'published'
+          : 'publishing';
+
         const { error: postUpdateError } = await supabaseAdmin
           .from('posts')
           .update({
-            status: 'published',
-            error_message: null,
+            status: nextStatus,
+            error_message: isProcessingFailed ? failureReason || 'YouTube processing failed' : null,
             published_once: true,
-            posted_at: processedAt,
-            published_at: processedAt,
+            posted_at: isProcessingSucceeded ? processedAt : null,
+            published_at: isProcessingSucceeded ? processedAt : null,
             provider_post_id: uploadResult.videoId,
             platform_post_id: uploadResult.videoId,
+            youtube_video_id: uploadResult.videoId,
+            yt_upload_status: videoStatus.uploadStatus,
+            yt_processing_status: videoStatus.processingStatus,
+            yt_failure_reason: failureReason,
+            yt_last_checked_at: processedAt,
             updated_at: processedAt,
           })
           .eq('id', scheduledPost.id);
@@ -345,7 +369,11 @@ export async function POST(request: Request) {
           throw postUpdateError;
         }
 
-        youtubePublishedCount += 1;
+        if (isProcessingFailed) {
+          youtubeFailedCount += 1;
+        } else {
+          youtubePublishedCount += 1;
+        }
       } catch (postError: any) {
         console.error(
           `[CRON] run_id=${runId} now_utc=${processedAt} publish_failed post_id=${scheduledPost.id} error=${postError?.message || 'unknown'}`
@@ -364,6 +392,84 @@ export async function POST(request: Request) {
 
         youtubeFailedCount += 1;
       }
+    }
+
+    const processingWindowIso = new Date(Date.now() - 60 * 1000).toISOString();
+    const pollingCandidates = await supabaseAdmin
+      .from('posts')
+      .select(
+        'id, user_id, platform_account_id, provider_post_id, yt_last_checked_at, yt_processing_status, yt_upload_status, status, created_at, posted_at, published_at'
+      )
+      .eq('platform', PLATFORMS.YOUTUBE)
+      .not('provider_post_id', 'is', null)
+      .lt('created_at', processingWindowIso)
+      .or('yt_processing_status.is.null,yt_processing_status.in.(processing,uploaded)')
+      .order('created_at', { ascending: true })
+      .limit(25);
+
+    if (pollingCandidates.error) {
+      throw pollingCandidates.error;
+    }
+
+    for (const post of pollingCandidates.data || []) {
+      const lastCheckedAt = post.yt_last_checked_at
+        ? new Date(post.yt_last_checked_at).getTime()
+        : 0;
+      if (lastCheckedAt && Date.now() - lastCheckedAt < 2 * 60 * 1000) {
+        continue;
+      }
+
+      if (!post.platform_account_id || !post.provider_post_id) {
+        continue;
+      }
+
+      const { data: account, error: accountError } = await supabaseAdmin
+        .from('platform_accounts')
+        .select('id, refresh_token')
+        .eq('user_id', post.user_id)
+        .eq('platform', PLATFORMS.YOUTUBE)
+        .eq('platform_account_id', post.platform_account_id)
+        .single();
+
+      if (accountError || !account?.refresh_token) {
+        continue;
+      }
+
+      const { accessToken } = await refreshYouTubeAccessToken(account.refresh_token);
+      const statusInfo = await fetchYouTubeVideoStatus(accessToken, post.provider_post_id);
+      const failureReason =
+        statusInfo.processingFailureReason || statusInfo.rejectionReason || null;
+      const isProcessingFailed =
+        statusInfo.processingStatus === 'failed' ||
+        statusInfo.processingStatus === 'terminated' ||
+        statusInfo.uploadStatus === 'failed' ||
+        statusInfo.uploadStatus === 'rejected';
+      const isProcessingSucceeded =
+        statusInfo.processingStatus === 'succeeded' &&
+        statusInfo.uploadStatus !== 'rejected' &&
+        statusInfo.uploadStatus !== 'failed';
+
+      const nowIso = new Date().toISOString();
+      const nextStatus = isProcessingFailed
+        ? 'failed'
+        : isProcessingSucceeded
+        ? 'published'
+        : post.status;
+
+      await supabaseAdmin
+        .from('posts')
+        .update({
+          status: nextStatus,
+          error_message: isProcessingFailed ? failureReason || 'YouTube processing failed' : null,
+          posted_at: isProcessingSucceeded ? nowIso : post.posted_at || null,
+          published_at: isProcessingSucceeded ? nowIso : post.published_at || null,
+          yt_upload_status: statusInfo.uploadStatus,
+          yt_processing_status: statusInfo.processingStatus,
+          yt_failure_reason: failureReason,
+          yt_last_checked_at: nowIso,
+          updated_at: nowIso,
+        })
+        .eq('id', post.id);
     }
 
     console.log(

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const { data: scheduledPosts, error } = await supabaseAdmin
       .from('posts')
       .select(
-        'id, content, title, description, media_url, platform, platform_account_id, scheduled_at, status, error_message, visibility'
+        'id, content, title, description, media_url, platform, platform_account_id, scheduled_at, status, error_message, visibility, youtube_video_id, yt_processing_status, yt_upload_status, yt_failure_reason'
       )
       .eq('user_id', user.id)
       .not('scheduled_at', 'is', null)

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { PLATFORMS } from "@/lib/platforms";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { refreshYouTubeAccessToken } from "@/lib/youtube/client";
+import { fetchYouTubeVideoStatus, refreshYouTubeAccessToken } from "@/lib/youtube/client";
 import { uploadYouTubeVideo } from "@/lib/youtube/upload";
 
 /**
@@ -84,23 +84,49 @@ export async function POST(req: NextRequest) {
       mediaUrl: post.media_url,
     });
 
-    const publishedAt = new Date().toISOString();
+    const nowIso = new Date().toISOString();
+    const videoStatus = await fetchYouTubeVideoStatus(accessToken, uploadResult.videoId);
+    const failureReason =
+      videoStatus.processingFailureReason || videoStatus.rejectionReason || null;
+    const isProcessingFailed =
+      videoStatus.processingStatus === "failed" ||
+      videoStatus.processingStatus === "terminated" ||
+      videoStatus.uploadStatus === "failed" ||
+      videoStatus.uploadStatus === "rejected";
+    const isProcessingSucceeded =
+      videoStatus.processingStatus === "succeeded" &&
+      videoStatus.uploadStatus !== "rejected" &&
+      videoStatus.uploadStatus !== "failed";
+
+    const nextStatus = isProcessingFailed
+      ? "failed"
+      : isProcessingSucceeded
+      ? "published"
+      : "publishing";
+
     await supabaseAdmin
       .from("posts")
       .update({
-        status: "published",
+        status: nextStatus,
         published_once: true,
-        posted_at: publishedAt,
-        published_at: publishedAt,
+        posted_at: isProcessingSucceeded ? nowIso : null,
+        published_at: isProcessingSucceeded ? nowIso : null,
         provider_post_id: uploadResult.videoId,
         platform_post_id: uploadResult.videoId,
-        error_message: null,
+        youtube_video_id: uploadResult.videoId,
+        yt_upload_status: videoStatus.uploadStatus,
+        yt_processing_status: videoStatus.processingStatus,
+        yt_failure_reason: failureReason,
+        yt_last_checked_at: nowIso,
+        error_message: isProcessingFailed ? failureReason || "YouTube processing failed" : null,
       })
       .eq("id", post.id);
 
     return NextResponse.json({
       success: true,
       videoId: uploadResult.videoId,
+      processingStatus: videoStatus.processingStatus,
+      uploadStatus: videoStatus.uploadStatus,
     });
   } catch (error: any) {
     console.error("YouTube post error:", error);
