@@ -108,7 +108,8 @@ export async function POST(req: NextRequest) {
         .select('facebook_page_id, facebook_page_access_token, expires_at')
         .eq('user_id', user.id)
         .eq('platform', PLATFORMS.FACEBOOK)
-        .single();
+        .eq('facebook_page_id', platformAccountId || '')
+        .maybeSingle();
 
       if (connectionError || !connection) {
         return NextResponse.json(

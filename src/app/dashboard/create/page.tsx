@@ -10,12 +10,20 @@ const imageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const videoTypes = ["video/mp4", "video/webm", "video/quicktime"];
 
 type PostMode = "now" | "schedule";
-type YouTubeUploadType = "video" | "shorts" | "post";
+type YouTubeUploadType = "video" | "shorts";
+type Destination = {
+  platform: string;
+  accountId: string;
+  name: string | null;
+  recordId: string;
+};
 
 export default function CreatePage() {
   const router = useRouter();
-  const { selectedAccount } = usePageScope();
-  const isYouTube = selectedAccount?.platform === PLATFORMS.YOUTUBE;
+  const { accounts, selectedAccount } = usePageScope();
+  const [selectedDestinations, setSelectedDestinations] = useState<Destination[]>([]);
+  const hasYouTube = selectedDestinations.some((dest) => dest.platform === PLATFORMS.YOUTUBE);
+  const hasFacebook = selectedDestinations.some((dest) => dest.platform === PLATFORMS.FACEBOOK);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -34,8 +42,8 @@ export default function CreatePage() {
   const [submitting, setSubmitting] = useState(false);
 
   const allowedTypes = useMemo(
-    () => (isYouTube ? videoTypes : [...imageTypes, ...videoTypes]),
-    [isYouTube]
+    () => (hasYouTube ? videoTypes : [...imageTypes, ...videoTypes]),
+    [hasYouTube]
   );
 
   useEffect(() => {
@@ -55,7 +63,7 @@ export default function CreatePage() {
   const handleFileChange = (selectedFile: File | null) => {
     if (!selectedFile) return;
     if (!allowedTypes.includes(selectedFile.type)) {
-      setError(isYouTube ? "Unsupported file type. Please upload a video." : "Unsupported file type.");
+      setError(hasYouTube ? "Unsupported file type. Please upload a video." : "Unsupported file type.");
       setFile(null);
       setUploadedMediaUrl(null);
       return;
@@ -129,11 +137,50 @@ export default function CreatePage() {
     }
   };
 
-  const createDraftPost = async (mediaUrl: string | null) => {
-    if (!selectedAccount) {
-      throw new Error("Please select a destination first.");
-    }
+  useEffect(() => {
+    if (!selectedAccount) return;
+    setSelectedDestinations((prev) => {
+      const exists = prev.some(
+        (dest) =>
+          dest.platform === selectedAccount.platform &&
+          dest.accountId === selectedAccount.accountId
+      );
+      if (exists) {
+        return prev;
+      }
+      return [
+        ...prev,
+        {
+          platform: selectedAccount.platform,
+          accountId: selectedAccount.accountId,
+          name: selectedAccount.name,
+          recordId: selectedAccount.recordId,
+        },
+      ];
+    });
+  }, [selectedAccount]);
 
+  const toggleDestination = (destination: Destination) => {
+    setSelectedDestinations((prev) => {
+      const exists = prev.some(
+        (dest) =>
+          dest.platform === destination.platform &&
+          dest.accountId === destination.accountId
+      );
+      if (exists) {
+        return prev.filter(
+          (dest) =>
+            !(
+              dest.platform === destination.platform &&
+              dest.accountId === destination.accountId
+            )
+        );
+      }
+      return [...prev, destination];
+    });
+  };
+
+  const createDraftPost = async (destination: Destination, mediaUrl: string | null) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       throw new Error("Please log in to create a post.");
@@ -145,17 +192,18 @@ export default function CreatePage() {
       ? "image"
       : null;
 
+    const isYouTubeDestination = destination.platform === PLATFORMS.YOUTUBE;
     const payload = {
       user_id: session.user.id,
-      content: isYouTube ? null : caption.trim() || null,
+      content: isYouTubeDestination ? null : caption.trim() || null,
       media_url: mediaUrl,
       media_type: mediaType,
-      title: isYouTube ? title.trim() : null,
-      description: isYouTube ? description.trim() || null : null,
-      visibility: isYouTube ? visibility : null,
-      yt_upload_type: isYouTube ? uploadType : null,
-      platform: selectedAccount.platform,
-      platform_account_id: selectedAccount.accountId,
+      title: isYouTubeDestination ? title.trim() : null,
+      description: isYouTubeDestination ? description.trim() || null : null,
+      visibility: isYouTubeDestination ? visibility : null,
+      yt_upload_type: isYouTubeDestination ? uploadType : null,
+      platform: destination.platform,
+      platform_account_id: destination.accountId,
       status: "draft",
       scheduled_at: null,
       published_at: null,
@@ -188,12 +236,12 @@ export default function CreatePage() {
   };
 
   const handleSubmit = async (mode: PostMode) => {
-    if (!selectedAccount) {
-      setError("Select a destination before publishing.");
+    if (selectedDestinations.length === 0) {
+      setError("Select at least one destination before publishing.");
       return;
     }
 
-    if (isYouTube) {
+    if (hasYouTube) {
       if (!title.trim()) {
         setError("Title is required for YouTube.");
         return;
@@ -202,11 +250,9 @@ export default function CreatePage() {
         setError("Please upload a video.");
         return;
       }
-      if (uploadType === "post") {
-        setError("YouTube community posts are not supported yet.");
-        return;
-      }
-    } else if (!caption.trim() && !file && !uploadedMediaUrl) {
+    }
+
+    if (!hasYouTube && !caption.trim() && !file && !uploadedMediaUrl) {
       setError("Please add a caption or upload media.");
       return;
     }
@@ -221,84 +267,94 @@ export default function CreatePage() {
         mediaUrl = await uploadMedia();
       }
 
-      const post = await createDraftPost(mediaUrl || null);
+      const createdPosts = await Promise.all(
+        selectedDestinations.map((destination) => createDraftPost(destination, mediaUrl || null))
+      );
 
       if (mode === "schedule") {
         const scheduledAt = validateSchedule();
-        const res = await fetch("/api/schedule", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            postId: post.id,
-            scheduledAt,
-            platform: selectedAccount.platform,
-          }),
-        });
+        for (const post of createdPosts) {
+          const res = await fetch("/api/schedule", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              postId: post.id,
+              scheduledAt,
+              platform: post.platform,
+            }),
+          });
 
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || "Failed to schedule post.");
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.error || "Failed to schedule post.");
+          }
         }
 
-        setSuccess("Post scheduled successfully.");
+        const destinationNames = selectedDestinations
+          .map((dest) => (dest.platform === PLATFORMS.FACEBOOK ? "Facebook" : "YouTube"))
+          .join(" + ");
+        setSuccess(`Post scheduled for ${destinationNames}.`);
         router.push("/dashboard/schedule");
         return;
       }
 
-      if (isYouTube) {
-        await supabase
-          .from("posts")
-          .update({ status: "publishing" })
-          .eq("id", post.id);
-
-        const res = await fetch("/api/youtube/post", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postId: post.id }),
-        });
-
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || "Failed to publish YouTube video.");
-        }
-
-        setSuccess("Video published successfully.");
-      } else {
-        const res = await fetch("/api/facebook/post", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content: caption.trim() || null,
-            imageUrl: mediaUrl || null,
-          }),
-        });
-
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
+      for (const post of createdPosts) {
+        if (post.platform === PLATFORMS.YOUTUBE) {
           await supabase
             .from("posts")
-            .update({ status: "failed" })
+            .update({ status: "publishing" })
             .eq("id", post.id);
-          throw new Error(body.error || "Failed to publish post.");
+
+          const res = await fetch("/api/youtube/post", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ postId: post.id }),
+          });
+
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.error || "Failed to publish YouTube video.");
+          }
+        } else if (post.platform === PLATFORMS.FACEBOOK) {
+          const res = await fetch("/api/facebook/post", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content: caption.trim() || null,
+              imageUrl: mediaUrl || null,
+            }),
+          });
+
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            await supabase
+              .from("posts")
+              .update({ status: "failed" })
+              .eq("id", post.id);
+            throw new Error(body.error || "Failed to publish post.");
+          }
+
+          const published = await res.json();
+          await supabase
+            .from("posts")
+            .update({
+              posted_at: new Date().toISOString(),
+              published_at: new Date().toISOString(),
+              platform_post_id: published.postId || null,
+              provider_post_id: published.postId || null,
+              platform: PLATFORMS.FACEBOOK,
+              platform_account_id: post.platform_account_id,
+              status: "published",
+              published_once: true,
+            })
+            .eq("id", post.id);
         }
-
-        const published = await res.json();
-        await supabase
-          .from("posts")
-          .update({
-            posted_at: new Date().toISOString(),
-            published_at: new Date().toISOString(),
-            platform_post_id: published.postId || null,
-            provider_post_id: published.postId || null,
-            platform: PLATFORMS.FACEBOOK,
-            platform_account_id: selectedAccount.accountId,
-            status: "published",
-            published_once: true,
-          })
-          .eq("id", post.id);
-
-        setSuccess("Post published successfully.");
       }
+
+      const destinationNames = selectedDestinations
+        .map((dest) => (dest.platform === PLATFORMS.FACEBOOK ? "Facebook" : "YouTube"))
+        .join(" + ");
+      setSuccess(`Post sent to ${destinationNames}.`);
 
       setTitle("");
       setDescription("");
@@ -324,12 +380,12 @@ export default function CreatePage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-6">
-            {isYouTube ? (
+            {hasYouTube && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-zinc-300 mb-2">Upload type</label>
                   <div className="flex flex-wrap gap-2">
-                    {(["video", "shorts", "post"] as YouTubeUploadType[]).map((type) => (
+                    {(["video", "shorts"] as YouTubeUploadType[]).map((type) => (
                       <button
                         key={type}
                         type="button"
@@ -340,18 +396,13 @@ export default function CreatePage() {
                             : "border border-zinc-800 text-zinc-300"
                         }`}
                       >
-                        {type === "video" ? "Video" : type === "shorts" ? "Shorts" : "Post"}
+                        {type === "video" ? "Video" : "Shorts"}
                       </button>
                     ))}
                   </div>
                   {uploadType === "shorts" && (
                     <p className="text-xs text-zinc-500 mt-2">
                       Shorts should be vertical and under 60 seconds.
-                    </p>
-                  )}
-                  {uploadType === "post" && (
-                    <p className="text-xs text-rose-300 mt-2">
-                      Community posts are not supported yet.
                     </p>
                   )}
                 </div>
@@ -386,7 +437,8 @@ export default function CreatePage() {
                   </select>
                 </div>
               </>
-            ) : (
+            )}
+            {hasFacebook && (
               <div>
                 <label className="block text-sm font-medium text-zinc-300 mb-2">Caption</label>
                 <textarea
@@ -400,16 +452,16 @@ export default function CreatePage() {
 
             <div>
               <label className="block text-sm font-medium text-zinc-300 mb-2">
-                {isYouTube ? "Video" : "Media"}
+                {hasYouTube ? "Video" : "Media"}
               </label>
               <div className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950 px-4 py-4">
                 <div className="flex flex-col gap-3">
                   <input
                     type="file"
-                    accept={isYouTube ? "video/*" : "image/*,video/*"}
+                    accept={hasYouTube ? "video/*" : "image/*,video/*"}
                     onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
                     className="w-full text-sm text-zinc-400"
-                    disabled={uploading || submitting || (isYouTube && uploadType === "post")}
+                    disabled={uploading || submitting}
                   />
                   {(file || uploadedMediaUrl) && (
                     <div className="space-y-2">
@@ -511,7 +563,7 @@ export default function CreatePage() {
               <button
                 className="flex-1 bg-emerald-500 text-zinc-950 rounded-lg px-6 py-3 hover:bg-emerald-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                 onClick={() => handleSubmit(postMode)}
-                disabled={submitting || uploading || (isYouTube && uploadType === "post")}
+                disabled={submitting || uploading}
               >
                 {submitting ? (postMode === "schedule" ? "Scheduling..." : "Publishing...") : postMode === "schedule" ? "Schedule" : "Post now"}
               </button>
@@ -520,14 +572,44 @@ export default function CreatePage() {
 
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
             <div>
-              <h3 className="text-lg font-semibold text-white">Destination</h3>
-              <p className="text-sm text-zinc-400">
-                {selectedAccount?.name} · {selectedAccount?.platform === PLATFORMS.FACEBOOK ? "Facebook" : "YouTube"}
-              </p>
+              <h3 className="text-lg font-semibold text-white">Destinations</h3>
+              <p className="text-sm text-zinc-400">Choose one or both platforms.</p>
+            </div>
+            <div className="space-y-2">
+              {accounts.map((account) => {
+                const isSelected = selectedDestinations.some(
+                  (dest) =>
+                    dest.platform === account.platform &&
+                    dest.accountId === account.accountId
+                );
+                const label = `${account.name || "Account"} · ${
+                  account.platform === PLATFORMS.FACEBOOK ? "Facebook" : "YouTube"
+                }`;
+                return (
+                  <label
+                    key={`${account.platform}-${account.accountId}`}
+                    className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-200"
+                  >
+                    <span>{label}</span>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() =>
+                        toggleDestination({
+                          platform: account.platform,
+                          accountId: account.accountId,
+                          name: account.name,
+                          recordId: account.recordId,
+                        })
+                      }
+                    />
+                  </label>
+                );
+              })}
             </div>
             <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
               {uploadedMediaUrl ? "Media ready" : "No media uploaded"} ·{" "}
-              {isYouTube ? (title ? "Title set" : "Title missing") : caption ? "Caption added" : "Caption missing"}
+              {hasYouTube ? (title ? "Title set" : "Title missing") : caption ? "Caption added" : "Caption missing"}
             </div>
           </div>
         </div>
