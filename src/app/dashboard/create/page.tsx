@@ -10,6 +10,7 @@ const imageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const videoTypes = ["video/mp4", "video/webm", "video/quicktime"];
 
 type PostMode = "now" | "schedule";
+type YouTubeUploadType = "video" | "shorts" | "post";
 
 export default function CreatePage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function CreatePage() {
   const [uploading, setUploading] = useState(false);
   const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
   const [postMode, setPostMode] = useState<PostMode>("now");
+  const [uploadType, setUploadType] = useState<YouTubeUploadType>("video");
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -151,6 +153,7 @@ export default function CreatePage() {
       title: isYouTube ? title.trim() : null,
       description: isYouTube ? description.trim() || null : null,
       visibility: isYouTube ? visibility : null,
+      yt_upload_type: isYouTube ? uploadType : null,
       platform: selectedAccount.platform,
       platform_account_id: selectedAccount.accountId,
       status: "draft",
@@ -197,6 +200,10 @@ export default function CreatePage() {
       }
       if (!file && !uploadedMediaUrl) {
         setError("Please upload a video.");
+        return;
+      }
+      if (uploadType === "post") {
+        setError("YouTube community posts are not supported yet.");
         return;
       }
     } else if (!caption.trim() && !file && !uploadedMediaUrl) {
@@ -320,6 +327,35 @@ export default function CreatePage() {
             {isYouTube ? (
               <>
                 <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Upload type</label>
+                  <div className="flex flex-wrap gap-2">
+                    {(["video", "shorts", "post"] as YouTubeUploadType[]).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setUploadType(type)}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          uploadType === type
+                            ? "bg-emerald-500 text-zinc-950"
+                            : "border border-zinc-800 text-zinc-300"
+                        }`}
+                      >
+                        {type === "video" ? "Video" : type === "shorts" ? "Shorts" : "Post"}
+                      </button>
+                    ))}
+                  </div>
+                  {uploadType === "shorts" && (
+                    <p className="text-xs text-zinc-500 mt-2">
+                      Shorts should be vertical and under 60 seconds.
+                    </p>
+                  )}
+                  {uploadType === "post" && (
+                    <p className="text-xs text-rose-300 mt-2">
+                      Community posts are not supported yet.
+                    </p>
+                  )}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-zinc-300 mb-2">Title</label>
                   <input
                     className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -373,7 +409,7 @@ export default function CreatePage() {
                     accept={isYouTube ? "video/*" : "image/*,video/*"}
                     onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
                     className="w-full text-sm text-zinc-400"
-                    disabled={uploading || submitting}
+                    disabled={uploading || submitting || (isYouTube && uploadType === "post")}
                   />
                   {(file || uploadedMediaUrl) && (
                     <div className="space-y-2">
@@ -475,7 +511,7 @@ export default function CreatePage() {
               <button
                 className="flex-1 bg-emerald-500 text-zinc-950 rounded-lg px-6 py-3 hover:bg-emerald-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                 onClick={() => handleSubmit(postMode)}
-                disabled={submitting || uploading}
+                disabled={submitting || uploading || (isYouTube && uploadType === "post")}
               >
                 {submitting ? (postMode === "schedule" ? "Scheduling..." : "Publishing...") : postMode === "schedule" ? "Schedule" : "Post now"}
               </button>
