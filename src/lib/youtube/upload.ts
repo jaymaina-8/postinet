@@ -26,6 +26,42 @@ async function fetchMediaStream(mediaUrl: string) {
   };
 }
 
+async function uploadWithRetry(
+  uploadUrl: string,
+  init: RequestInit & { duplex: 'half' },
+  maxAttempts = 3
+) {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(uploadUrl, init as RequestInit & { duplex: 'half' });
+      if (response.ok) {
+        return response;
+      }
+
+      const retryableStatuses = [408, 429, 500, 502, 503, 504];
+      const errorBody = await response.json().catch(() => ({}));
+      const message = errorBody?.error?.message || `YouTube upload failed (${response.status})`;
+      lastError = new Error(message);
+
+      if (!retryableStatuses.includes(response.status) || attempt === maxAttempts) {
+        throw lastError;
+      }
+    } catch (error: any) {
+      lastError = error;
+      if (attempt === maxAttempts) {
+        throw lastError;
+      }
+    }
+
+    const backoffMs = 1000 * attempt;
+    await new Promise((resolve) => setTimeout(resolve, backoffMs));
+  }
+
+  throw lastError || new Error('Failed to upload YouTube video');
+}
+
 export async function uploadYouTubeVideo(input: UploadInput): Promise<UploadResult> {
   const metadata = {
     snippet: {
@@ -61,19 +97,23 @@ export async function uploadYouTubeVideo(input: UploadInput): Promise<UploadResu
   }
 
   const { stream, contentLength, contentType } = await fetchMediaStream(input.mediaUrl);
+  console.log('[YouTube Upload] init', {
+    contentType,
+    contentLength,
+  });
 
-  const uploadResponse = await fetch(
+  const uploadResponse = await uploadWithRetry(
     uploadUrl,
     {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${input.accessToken}`,
-      'Content-Type': contentType,
-      ...(contentLength ? { 'Content-Length': contentLength } : {}),
-    },
-    body: stream,
-    duplex: 'half',
-    } as RequestInit & { duplex: 'half' }
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+        'Content-Type': contentType,
+        ...(contentLength ? { 'Content-Length': contentLength } : {}),
+      },
+      body: stream,
+      duplex: 'half',
+    }
   );
 
   const result = await uploadResponse.json().catch(() => ({}));
