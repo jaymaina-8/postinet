@@ -1,6 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+/**
+ * History: Your posts with creator-friendly labels. Filter from URL ?filter= supported.
+ * Retry shown only when post is actually retryable (e.g. failed).
+ */
+import React, { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import supabase from '@/lib/supabaseClient';
 import { formatError } from '@/lib/utils';
 import { PageGate, usePageScope } from '@/components/PageScope';
@@ -28,11 +33,23 @@ interface Post {
   status: 'draft' | 'scheduled' | 'published' | 'failed' | 'cancelled' | 'publishing' | 'uploading';
 }
 
-export default function HistoryPage() {
+type FilterValue = 'all' | 'draft' | 'scheduled' | 'published' | 'failed';
+
+function HistoryPageContent() {
+  const searchParams = useSearchParams();
   const { selectedAccount } = usePageScope();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'draft' | 'scheduled' | 'published' | 'failed'>('all');
+  const [filter, setFilter] = useState<FilterValue>(() => {
+    const f = searchParams.get('filter');
+    if (f === 'draft' || f === 'scheduled' || f === 'published' || f === 'failed') return f;
+    return 'all';
+  });
+
+  useEffect(() => {
+    const f = searchParams.get('filter');
+    if (f === 'draft' || f === 'scheduled' || f === 'published' || f === 'failed') setFilter(f);
+  }, [searchParams]);
 
   useEffect(() => {
     if (selectedAccount) {
@@ -161,20 +178,30 @@ export default function HistoryPage() {
     return new Date(dateString).toLocaleString();
   }
 
+  // Creator-friendly labels
+  const statusLabels: Record<string, string> = {
+    draft: 'Needs finishing',
+    scheduled: 'Going out',
+    published: 'Live',
+    failed: 'Needs attention',
+    cancelled: 'Cancelled',
+    publishing: 'Publishing…',
+    uploading: 'Uploading…',
+  };
   function getStatusBadge(status: string) {
-    const styles = {
-        draft: 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/30',
-        scheduled: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
-        published: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
-        failed: 'bg-rose-500/20 text-rose-300 border border-rose-500/30',
-        cancelled: 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/30',
-        publishing: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
-        uploading: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
-      };
-
+    const styles: Record<string, string> = {
+      draft: 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/30',
+      scheduled: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+      published: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+      failed: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+      cancelled: 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/30',
+      publishing: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+      uploading: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+    };
+    const label = statusLabels[status] ?? status;
     return (
-      <span className={`px-2 py-1 rounded text-xs font-medium ${styles[status as keyof typeof styles] || styles.draft}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <span className={`px-2 py-1 rounded text-xs font-medium ${styles[status] || styles.draft}`}>
+        {label}
       </span>
     );
   }
@@ -197,62 +224,31 @@ export default function HistoryPage() {
       {/* Previous structure: filter tabs followed by full-width content cards. */}
       <div className="max-w-6xl mx-auto py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-semibold text-white mb-2">Content history</h1>
-          <p className="text-zinc-400">View your drafts, scheduled posts, and published content</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white mb-2">Your posts</h1>
+          <p className="text-zinc-400 text-sm">Drafts, scheduled, and published content.</p>
         </div>
 
-      {/* Filters */}
+      {/* Filters - creator-friendly labels */}
       <div className="mb-6 flex flex-wrap gap-2">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded text-sm font-medium ${
-            filter === 'all'
-              ? 'bg-emerald-500 text-zinc-950'
-              : 'border border-zinc-800 text-zinc-300'
-          }`}
-        >
-          All
-        </button>
-        <button
-          onClick={() => setFilter('draft')}
-          className={`px-4 py-2 rounded text-sm font-medium ${
-            filter === 'draft'
-              ? 'bg-emerald-500 text-zinc-950'
-              : 'border border-zinc-800 text-zinc-300'
-          }`}
-        >
-          Drafts
-        </button>
-        <button
-          onClick={() => setFilter('scheduled')}
-          className={`px-4 py-2 rounded text-sm font-medium ${
-            filter === 'scheduled'
-              ? 'bg-emerald-500 text-zinc-950'
-              : 'border border-zinc-800 text-zinc-300'
-          }`}
-        >
-          Scheduled
-        </button>
-        <button
-          onClick={() => setFilter('published')}
-          className={`px-4 py-2 rounded text-sm font-medium ${
-            filter === 'published'
-              ? 'bg-emerald-500 text-zinc-950'
-              : 'border border-zinc-800 text-zinc-300'
-          }`}
-        >
-          Published
-        </button>
-        <button
-          onClick={() => setFilter('failed')}
-          className={`px-4 py-2 rounded text-sm font-medium ${
-            filter === 'failed'
-              ? 'bg-emerald-500 text-zinc-950'
-              : 'border border-zinc-800 text-zinc-300'
-          }`}
-        >
-          Failed
-        </button>
+        {([
+          { value: 'all' as const, label: 'All' },
+          { value: 'draft' as const, label: 'Needs finishing' },
+          { value: 'scheduled' as const, label: 'Going out' },
+          { value: 'published' as const, label: 'Live' },
+          { value: 'failed' as const, label: 'Needs attention' },
+        ]).map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => setFilter(value)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              filter === value
+                ? 'bg-emerald-500 text-zinc-950'
+                : 'border border-zinc-800 text-zinc-300 hover:border-zinc-600'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Posts List */}
@@ -264,7 +260,7 @@ export default function HistoryPage() {
           <p className="text-zinc-500 text-sm mt-2">
             {filter === 'all'
               ? 'Start creating content to see it here'
-              : `No ${filter} posts yet`}
+              : `No ${statusLabels[filter] ?? filter} posts yet`}
           </p>
         </div>
       ) : (
@@ -350,5 +346,13 @@ export default function HistoryPage() {
       )}
       </div>
     </PageGate>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense fallback={<div className="max-w-6xl mx-auto py-8"><p className="text-zinc-500 text-sm">Loading…</p></div>}>
+      <HistoryPageContent />
+    </Suspense>
   );
 }

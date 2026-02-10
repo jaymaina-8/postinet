@@ -149,13 +149,13 @@ export default function SettingsView() {
   return (
     <div className="max-w-5xl mx-auto py-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-white">Settings</h1>
-        <p className="text-zinc-400">Control your profile, timezone, and security.</p>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-white">Settings</h1>
+        <p className="text-zinc-400 text-sm mt-1">Posting defaults, notifications, and security.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-white">Profile</h2>
+          <h2 className="text-lg font-semibold text-white">Account</h2>
           <div>
             <p className="text-xs text-zinc-500">Email</p>
             <p className="text-sm text-zinc-200">{userEmail || "Not available"}</p>

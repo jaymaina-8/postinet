@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Creator Home dashboard. Composition: Hero, PrimaryActionCard (Start a post),
+ * secondary links, NeedsAttentionCard (if failures), Your latest posts + right column
+ * (Connected accounts, This week's progress). See layout.tsx for shell.
+ */
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import supabase from "@/lib/supabaseClient";
@@ -9,6 +14,7 @@ import RecentActivityList from "@/components/dashboard/RecentActivityList";
 import PlatformStatusCard from "@/components/dashboard/PlatformStatusCard";
 import ThisWeekStats from "@/components/dashboard/ThisWeekStats";
 import EmptyStateHint from "@/components/dashboard/EmptyStateHint";
+import NeedsAttentionCard from "@/components/dashboard/NeedsAttentionCard";
 
 interface ConnectedAccount {
   platform: string;
@@ -55,6 +61,7 @@ export default function DashboardPage() {
   });
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -62,29 +69,23 @@ export default function DashboardPage() {
 
   async function fetchStats() {
     try {
-      // First check if user is authenticated
+      setError(null);
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
-        // User not logged in, use default empty stats
         setLoading(false);
         return;
       }
 
-      // Fetch connected accounts - try with all columns, fall back to basic if needed
       let accounts: ConnectedAccount[] = [];
-      
       const accountsResult = await supabase
         .from("connected_accounts")
         .select("platform, facebook_page_name, platform_username, facebook_page_access_token")
         .eq("user_id", session.user.id);
 
       if (accountsResult.error && accountsResult.error.message?.includes("does not exist")) {
-        // Fallback: try with only platform column
-        const fallbackResult = await supabase
-          .from("connected_accounts")
-          .select("platform");
-        accounts = fallbackResult.data?.map(acc => ({
+        const fallbackResult = await supabase.from("connected_accounts").select("platform");
+        accounts = fallbackResult.data?.map((acc: { platform: string }) => ({
           platform: acc.platform,
           facebook_page_name: null,
           platform_username: null,
@@ -98,21 +99,16 @@ export default function DashboardPage() {
       const connectedPlatforms =
         accounts
           .filter((a: ConnectedAccount) => {
-            // DB is the source of truth: Facebook is only "connected" if page token exists
-            if (a.platform === PLATFORMS.FACEBOOK) {
-              return a.facebook_page_access_token != null;
-            }
+            if (a.platform === PLATFORMS.FACEBOOK) return a.facebook_page_access_token != null;
             return true;
           })
           .map((a: ConnectedAccount) => a.platform) || [];
 
-      // Fetch posts stats
       const { data: posts, error: postsError } = await supabase
         .from("posts")
         .select("id, content, media_url, status, scheduled_at, posted_at, created_at")
         .order("created_at", { ascending: false });
 
-      // Only log if there's a real error with a message
       if (postsError && postsError.message) {
         console.error("Error fetching posts:", postsError.message);
       }
@@ -147,8 +143,9 @@ export default function DashboardPage() {
         scheduledUpcoming: scheduledUpcoming.length,
       });
       setRecentPosts((posts || []).slice(0, 5));
-    } catch (error) {
-      console.error("Error fetching stats:", error);
+    } catch (e) {
+      console.error("Error fetching stats:", e);
+      setError("Something went wrong. Try again.");
     } finally {
       setLoading(false);
     }
@@ -156,43 +153,54 @@ export default function DashboardPage() {
 
   const showConnectHint = !loading && !stats.hasConnectedAccounts;
   const showUploadHint = !loading && stats.hasConnectedAccounts && recentPosts.length === 0;
-  const showFailureHint = !loading && stats.failedCount > 0;
+  const showNeedsAttention = !loading && stats.failedCount > 0;
 
   return (
-    // Previous structure: dashboard mixed hero, quick links, stats, and activity with equal weight.
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-semibold text-white">Welcome to Postinet</h1>
-        <p className="text-zinc-400">Upload once. Schedule or post instantly.</p>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-white">Welcome to Postinet</h1>
+        <p className="text-zinc-400 text-sm sm:text-base">Upload once. Schedule or post instantly.</p>
       </div>
 
       <PrimaryActionCard />
 
       <div className="flex flex-wrap gap-2">
-        {[
-          { label: "View scheduled", href: "/dashboard/schedule" },
-          { label: "View history", href: "/dashboard/history" },
-          { label: "Manage accounts", href: "/dashboard/accounts" },
-        ].map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className="rounded-full border border-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:border-zinc-600"
-          >
-            {item.label}
-          </Link>
-        ))}
+        <Link
+          href="/dashboard/schedule"
+          className="rounded-full border border-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-600"
+        >
+          View scheduled
+        </Link>
+        <Link
+          href="/dashboard/history"
+          className="rounded-full border border-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-600"
+        >
+          View history
+        </Link>
+        <Link
+          href="/dashboard/accounts"
+          className="rounded-full border border-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-600"
+        >
+          Connect accounts
+        </Link>
       </div>
 
       {showConnectHint && <EmptyStateHint variant="connect" />}
       {!showConnectHint && showUploadHint && <EmptyStateHint variant="upload" />}
 
+      {showNeedsAttention && <NeedsAttentionCard />}
+
+      {error && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          {error}
+          <button type="button" onClick={() => fetchStats()} className="ml-2 underline">
+            Try again
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
-        <RecentActivityList
-          posts={recentPosts}
-          loading={loading}
-          showFailureHint={showFailureHint}
-        />
+        <RecentActivityList posts={recentPosts} loading={loading} />
         <div className="space-y-6">
           <PlatformStatusCard connectedPlatforms={stats.connectedPlatforms} />
           <ThisWeekStats

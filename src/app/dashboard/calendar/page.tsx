@@ -1,5 +1,19 @@
-import SchedulerView from "@/components/dashboard/SchedulerView";
+"use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+/**
+ * Calendar route redirects to schedule (Calendar UX lives at /dashboard/schedule).
+ */
 export default function CalendarPage() {
-  return <SchedulerView />;
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/dashboard/schedule");
+  }, [router]);
+  return (
+    <div className="max-w-6xl mx-auto py-8">
+      <p className="text-zinc-500 text-sm">Loading…</p>
+    </div>
+  );
 }

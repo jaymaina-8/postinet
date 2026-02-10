@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * Dashboard composition map:
+ * - This layout: auth check, PageScopeProvider, Topbar, Sidebar (desktop lg), MobileSidebarDrawer (mobile), PageContextBar, main content.
+ * - BottomNav: mobile-only, fixed bottom (see components/dashboard/BottomNav.tsx).
+ * - Home: src/app/dashboard/page.tsx. Other routes: dashboard/{create,schedule,history,accounts,profile,settings,help,billing}/page.tsx.
+ */
 import React, { ReactNode, useEffect, useState } from "react";
 import supabase from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
@@ -8,6 +14,7 @@ import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
 import MobileSidebarDrawer from "@/components/dashboard/MobileSidebarDrawer";
 import PageContextBar from "@/components/dashboard/PageContextBar";
+import BottomNav from "@/components/dashboard/BottomNav";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -96,27 +103,25 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return null;
   }
 
-  // Previous structure: inline Sidebar + Navbar components in this file,
-  // with PageScopeIndicator inside main content.
   return (
     <PageScopeProvider>
       <div className="min-h-screen bg-zinc-950 text-zinc-100">
         <Topbar onOpenSidebar={() => setMobileNavOpen(true)} />
         <div className="flex min-h-[calc(100vh-56px)]">
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <Sidebar />
           </div>
           <MobileSidebarDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)}>
             <Sidebar onNavigate={() => setMobileNavOpen(false)} />
           </MobileSidebarDrawer>
-          {/* Previous structure: PageContextBar lived inside main content. */}
-          <main className="flex-1 overflow-auto px-4 py-6 sm:px-6 lg:px-8">
-            <div className="sticky top-16 z-10 bg-zinc-950/80 pb-4 pt-2 backdrop-blur md:static md:pb-6">
+          <main className="flex-1 overflow-auto px-4 py-6 sm:px-6 lg:px-8 pb-20 lg:pb-6">
+            <div className="sticky top-14 z-10 bg-zinc-950/80 pb-4 pt-2 backdrop-blur md:static md:pb-6">
               <PageContextBar />
             </div>
             {children}
           </main>
         </div>
+        <BottomNav />
       </div>
     </PageScopeProvider>
   );

@@ -24,19 +24,29 @@ function formatDate(dateString: string) {
   return new Date(dateString).toLocaleString();
 }
 
+// Creator-friendly: scheduled → "Going out soon", failed → "Needs attention", published → "Live"
 function getStatusBadge(status: string) {
-  const styles = {
-    failed: "bg-rose-500/20 text-rose-300 border border-rose-500/30",
+  const labels: Record<string, string> = {
+    failed: "Needs attention",
+    scheduled: "Going out soon",
+    published: "Live",
+    cancelled: "Cancelled",
+    publishing: "Publishing…",
+    uploading: "Uploading…",
+  };
+  const display = labels[status] ?? "Going out soon";
+  const styles: Record<string, string> = {
+    failed: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
     scheduled: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
     published: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
     cancelled: "bg-zinc-500/20 text-zinc-300 border border-zinc-500/30",
     publishing: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
     uploading: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
   };
-
+  const style = styles[status] ?? styles.scheduled;
   return (
-    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${styles[status as keyof typeof styles] || styles.scheduled}`}>
-      {(status || "scheduled").charAt(0).toUpperCase() + (status || "scheduled").slice(1)}
+    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${style}`}>
+      {display}
     </span>
   );
 }
@@ -135,10 +145,28 @@ export default function SchedulePage() {
   return (
     <PageGate>
       <div className="max-w-6xl mx-auto py-8 space-y-6">
-        {/* Previous structure: schedule page used a calendar-style view with day/week/month filters. */}
         <div>
-          <h1 className="text-3xl font-semibold text-white">Scheduled posts</h1>
-          <p className="text-zinc-400">Review and manage scheduled content for this Page.</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white">Calendar</h1>
+          <p className="text-zinc-400 text-sm mt-1">Review and manage when your posts go out.</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs text-zinc-500">View:</span>
+          <button
+            type="button"
+            className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-zinc-200"
+          >
+            List
+          </button>
+          <button
+            type="button"
+            disabled
+            className="rounded-lg border border-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-500 cursor-not-allowed"
+            title="Coming soon"
+          >
+            Calendar
+          </button>
+          <span className="text-xs text-zinc-600">Calendar view coming soon</span>
         </div>
 
         {loading ? (
@@ -146,7 +174,7 @@ export default function SchedulePage() {
         ) : scheduledPosts.length === 0 ? (
           <div className="text-center py-12 bg-zinc-900/60 border border-zinc-800 rounded-xl">
             <p className="text-zinc-400">No scheduled posts</p>
-            <p className="text-zinc-500 text-sm mt-2">Create a post and schedule it to see it here</p>
+            <p className="text-zinc-500 text-sm mt-2">Create a post and choose a time to see it here</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -172,7 +200,7 @@ export default function SchedulePage() {
                       <div className="flex flex-wrap items-center gap-2">
                         {getPlatformBadge(scheduledPost.platform)}
                         {getStatusBadge(scheduledPost.status === "pending" ? "scheduled" : scheduledPost.status)}
-                        <span className="text-xs text-zinc-500">Scheduled: {formatDate(scheduledPost.scheduled_at)}</span>
+                        <span className="text-xs text-zinc-500">Goes out: {formatDate(scheduledPost.scheduled_at)}</span>
                       </div>
                       <p className="text-zinc-100">
                         {scheduledPost.title || scheduledPost.content || "Untitled post"}
