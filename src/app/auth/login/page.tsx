@@ -13,9 +13,26 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true);
+    setError("");
+    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "";
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+    if (oauthError) {
+      setError(oauthError.message || "Google sign-in failed.");
+      setGoogleLoading(false);
+      return;
+    }
+    // Redirect happens via Supabase; keep loading state until leave
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -92,6 +109,23 @@ export default function LoginPage() {
           <CardTitle>Sign In</CardTitle>
         </CardHeader>
         <CardContent>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full mb-4"
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading}
+          >
+            {googleLoading ? "Redirecting…" : "Continue with Google"}
+          </Button>
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-zinc-200" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-zinc-500">or</span>
+            </div>
+          </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

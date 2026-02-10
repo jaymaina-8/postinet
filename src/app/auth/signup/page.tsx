@@ -13,9 +13,25 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+
+  async function handleGoogleSignUp() {
+    setGoogleLoading(true);
+    setError("");
+    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "";
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+    if (oauthError) {
+      setError(oauthError.message || "Google sign-in failed.");
+      setGoogleLoading(false);
+      return;
+    }
+  }
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -91,6 +107,23 @@ export default function SignupPage() {
           <CardTitle>Sign Up</CardTitle>
         </CardHeader>
         <CardContent>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full mb-4"
+            onClick={handleGoogleSignUp}
+            disabled={googleLoading}
+          >
+            {googleLoading ? "Redirecting…" : "Continue with Google"}
+          </Button>
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-zinc-200" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-zinc-500">or</span>
+            </div>
+          </div>
           <form onSubmit={handleSignup} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

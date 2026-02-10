@@ -158,7 +158,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-white">Welcome to Postinet</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-white">Welcome to Postinet AI</h1>
         <p className="text-zinc-400 text-sm sm:text-base">Upload once. Schedule or post instantly.</p>
       </div>
 

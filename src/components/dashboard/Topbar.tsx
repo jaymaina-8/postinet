@@ -4,6 +4,7 @@
  * Topbar: logo + hamburger (mobile). Logout and user email live in Profile page and drawer footer.
  */
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 export default function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   return (
@@ -20,8 +21,8 @@ export default function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void })
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <Link href="/dashboard" className="text-sm font-semibold tracking-[0.2em] text-zinc-200 hover:text-white">
-            POSTINET
+          <Link href="/dashboard" className="text-zinc-200 hover:text-white transition-colors">
+            <Logo showName />
           </Link>
         </div>
       </div>

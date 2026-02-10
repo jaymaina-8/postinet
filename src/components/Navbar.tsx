@@ -1,27 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import supabase from "@/lib/supabaseClient";
+import { Logo } from "@/components/Logo";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSignedIn(!!session);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => setSignedIn(!!session));
+    return () => subscription?.unsubscribe();
+  }, []);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-white/10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">P</span>
-            </div>
-            <Link href="/" className="text-xl font-bold text-white tracking-tight">
-              Postinet
-            </Link>
-          </div>
+          <Link href="/" className="flex items-center gap-2">
+            <Logo showName />
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
+            <Link href="/pricing" className="text-sm text-gray-300 hover:text-white transition-colors">
+              Pricing
+            </Link>
             <a href="#features" className="text-sm text-gray-300 hover:text-white transition-colors">
               Features
             </a>
@@ -33,20 +42,31 @@ export default function Navbar() {
             </a>
           </div>
 
-          {/* Auth Buttons */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link
-              href="/auth/login"
-              className="text-sm text-gray-300 hover:text-white transition-colors px-4 py-2"
-            >
-              Login
-            </Link>
-            <Link
-              href="/auth/signup"
-              className="text-sm bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-5 py-2 rounded-full font-medium hover:opacity-90 transition-opacity"
-            >
-              Get Started
-            </Link>
+          {/* Auth: signed in → My dashboard; else → Log in + Get Started */}
+          <div className="hidden md:flex items-center gap-3">
+            {signedIn ? (
+              <Link
+                href="/dashboard"
+                className="text-sm bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity"
+              >
+                My dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/auth/login"
+                  className="text-sm text-gray-300 hover:text-white transition-colors px-4 py-2"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/auth/signup"
+                  className="text-sm bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -71,6 +91,13 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-white/10">
             <div className="flex flex-col gap-4">
+              <Link
+                href="/pricing"
+                className="text-sm text-gray-300 hover:text-white transition-colors px-2 py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Pricing
+              </Link>
               <a
                 href="#features"
                 className="text-sm text-gray-300 hover:text-white transition-colors px-2 py-2"
@@ -93,18 +120,32 @@ export default function Navbar() {
                 How It Works
               </a>
               <div className="flex flex-col gap-2 pt-4 border-t border-white/10">
-                <Link
-                  href="/auth/login"
-                  className="text-sm text-gray-300 hover:text-white transition-colors px-2 py-2"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/auth/signup"
-                  className="text-sm bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-5 py-2 rounded-full font-medium hover:opacity-90 transition-opacity text-center"
-                >
-                  Get Started
-                </Link>
+                {signedIn ? (
+                  <Link
+                    href="/dashboard"
+                    className="text-sm bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity text-center"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    My dashboard
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      href="/auth/login"
+                      className="text-sm text-gray-300 hover:text-white transition-colors px-2 py-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Log in
+                    </Link>
+                    <Link
+                      href="/auth/signup"
+                      className="text-sm bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity text-center"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Get Started
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

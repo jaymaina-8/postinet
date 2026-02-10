@@ -55,7 +55,7 @@ export default function MobileSidebarDrawer({ open, onClose, children }: DrawerP
         className="relative flex h-full w-72 flex-col bg-zinc-950 border-r border-zinc-900 shadow-xl"
       >
         <div className="flex items-center justify-between px-4 py-4 border-b border-zinc-900">
-          <span className="text-xs font-semibold tracking-[0.2em] text-zinc-200">POSTINET</span>
+          <span className="text-xs font-semibold text-zinc-200">Postinet AI</span>
           <button
             type="button"
             onClick={onClose}

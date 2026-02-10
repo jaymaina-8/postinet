@@ -103,7 +103,10 @@ mustNotIncludeInSrc(
     "headers.get(\"authorization\")",
     "exchangeCodeForSession(",
   ],
-  new Set(["src/app/api/facebook/exchange/route.ts"]) // allowed ONLY on server callback
+  new Set([
+    "src/app/api/facebook/exchange/route.ts", // server callback
+    "src/app/auth/callback/page.tsx",         // Supabase PKCE callback (exchangeCodeForSession)
+  ])
 );
 
 // 3) OAuth initiation must be browser-only and Facebook redirectTo must be consistent.

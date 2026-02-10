@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
+import { Logo } from "@/components/Logo";
 
 type NavItem = {
   href: string;
@@ -107,9 +108,9 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       }`}
     >
       <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold tracking-[0.2em] text-zinc-200">
-          {collapsed ? "PI" : "POSTINET"}
-        </div>
+        <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+          <Logo showName={!collapsed} compact={collapsed} />
+        </Link>
         <button
           type="button"
           onClick={() => setCollapsed((prev) => !prev)}

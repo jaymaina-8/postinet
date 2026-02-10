@@ -11,7 +11,7 @@ export default function Footer() {
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <div className="h-8 w-8 rounded bg-gradient-to-br from-blue-500 to-purple-600"></div>
-              <h3 className="text-xl font-semibold text-white">Postinet</h3>
+              <h3 className="text-xl font-semibold text-white">Postinet AI</h3>
             </div>
             <p className="text-sm leading-relaxed">
               Automated social publishing for creators and businesses.
@@ -24,6 +24,12 @@ export default function Footer() {
               Product
             </h4>
             <nav className="flex flex-col space-y-2" aria-label="Product navigation">
+              <Link
+                href="/pricing"
+                className="text-sm transition-colors hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#111]"
+              >
+                Pricing
+              </Link>
               <Link
                 href="/auth/login"
                 className="text-sm transition-colors hover:text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#111]"
@@ -76,7 +82,7 @@ export default function Footer() {
         {/* Bottom Row */}
         <div className="mt-12 border-t border-gray-800 pt-8 text-center">
           <p className="text-xs text-gray-500">
-            © {currentYear} Postinet. All rights reserved.
+            © {currentYear} Postinet AI. All rights reserved.
           </p>
         </div>
       </div>
