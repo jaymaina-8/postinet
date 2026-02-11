@@ -162,7 +162,7 @@ export default function LoginPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white border-0"
+                className="border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50"
                 onClick={handleResendConfirmation}
                 disabled={resendLoading || !email}
               >
@@ -180,8 +180,9 @@ export default function LoginPage() {
         )}
         <Button
           type="submit"
+          variant="outline"
           disabled={loading}
-          className="w-full h-11 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+          className="w-full h-11 rounded-lg border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 font-medium"
         >
           {loading ? "Signing in…" : "Sign in"}
         </Button>

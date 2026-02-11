@@ -80,7 +80,13 @@ export default function Footer() {
         </div>
 
         {/* Bottom Row */}
-        <div className="mt-12 border-t border-gray-800 pt-8 text-center">
+        <div className="mt-12 border-t border-gray-800 pt-8 text-center space-y-4">
+          <Link
+            href="/auth/signup"
+            className="inline-block rounded-lg border border-zinc-400 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 transition-colors"
+          >
+            Get started free
+          </Link>
           <p className="text-xs text-gray-500">
             © {currentYear} Postinet AI. All rights reserved.
           </p>

@@ -42,7 +42,7 @@ export function PricingSection({ freeMonthlyPosts }: PricingSectionProps) {
               </ul>
               <Link
                 href="/auth/signup"
-                className="mt-auto pt-6 w-full rounded-lg border border-zinc-600 py-3 text-center text-sm font-semibold text-white hover:border-zinc-500 transition-colors"
+                className="mt-auto pt-6 w-full rounded-lg border border-zinc-300 bg-white py-3 text-center text-sm font-semibold text-zinc-900 hover:bg-zinc-50 transition-colors"
               >
                 Get started
               </Link>
@@ -65,7 +65,7 @@ export function PricingSection({ freeMonthlyPosts }: PricingSectionProps) {
               </ul>
               <Link
                 href="/auth/signup"
-                className="mt-auto pt-6 w-full rounded-lg bg-emerald-500 py-3 text-center text-sm font-semibold text-white hover:bg-emerald-400 transition-colors"
+                className="mt-auto pt-6 w-full rounded-lg border border-zinc-300 bg-white py-3 text-center text-sm font-semibold text-zinc-900 hover:bg-zinc-50 transition-colors"
               >
                 Upgrade
               </Link>
@@ -159,7 +159,7 @@ export function PricingSection({ freeMonthlyPosts }: PricingSectionProps) {
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/auth/signup"
-              className="w-full sm:w-auto rounded-lg bg-emerald-500 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-400 transition-colors"
+              className="w-full sm:w-auto rounded-lg border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 transition-colors"
             >
               Start free
             </Link>

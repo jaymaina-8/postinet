@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import { LandingFooter } from "@/components/landing";
 import { PricingSection } from "./PricingSection";
 
 export const metadata: Metadata = {
@@ -29,7 +29,7 @@ export default function PricingPage() {
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/auth/signup"
-              className="w-full sm:w-auto rounded-lg bg-emerald-500 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-400 transition-colors"
+              className="w-full sm:w-auto rounded-lg border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 transition-colors"
             >
               Start free
             </Link>
@@ -46,7 +46,7 @@ export default function PricingPage() {
       {/* Pricing cards + What you're paying for + Trust + FAQ + Final CTA */}
       <PricingSection freeMonthlyPosts={FREE_MONTHLY_POSTS} />
 
-      <Footer />
+      <LandingFooter />
     </div>
   );
 }

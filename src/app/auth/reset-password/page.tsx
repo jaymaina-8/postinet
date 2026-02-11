@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import supabase from "@/lib/supabaseClient";
@@ -8,7 +8,7 @@ import { AuthPageShell } from "@/components/auth/AuthPageShell";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Button } from "@/components/ui/button";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<"verifying" | "form" | "done" | "error">("verifying");
@@ -81,7 +81,7 @@ export default function ResetPasswordPage() {
         {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
         <Link
           href="/auth/forgot-password"
-          className="inline-block rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2.5"
+          className="inline-block rounded-lg border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 font-medium px-4 py-2.5"
         >
           Request new reset link
         </Link>
@@ -133,8 +133,9 @@ export default function ResetPasswordPage() {
         {error && <p className="text-sm text-red-400">{error}</p>}
         <Button
           type="submit"
+          variant="outline"
           disabled={loading}
-          className="w-full h-11 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+          className="w-full h-11 rounded-lg border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 font-medium"
         >
           {loading ? "Updating…" : "Update password"}
         </Button>
@@ -146,5 +147,19 @@ export default function ResetPasswordPage() {
         </Link>
       </p>
     </AuthPageShell>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthPageShell quote="Postinet — schedule once, publish everywhere." authorHandle="@postinet">
+          <div className="text-zinc-400">Loading…</div>
+        </AuthPageShell>
+      }
+    >
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
