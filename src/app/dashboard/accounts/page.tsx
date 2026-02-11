@@ -307,7 +307,7 @@ function AccountsPageContent() {
 
   // Previous structure: platform cards with inline actions and security footer.
   return (
-    <div className="max-w-5xl mx-auto py-8 space-y-6">
+    <div className="max-w-5xl mx-auto pt-4 pb-8 space-y-6">
       <div>
         <h1 className="text-3xl font-semibold text-white">Social accounts</h1>
         <p className="text-zinc-400">

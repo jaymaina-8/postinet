@@ -165,7 +165,7 @@ export default function TemplatesPage() {
   const customTemplates = templates.filter(t => t.is_custom);
 
   return (
-    <div className="max-w-6xl mx-auto py-8">
+    <div className="max-w-6xl mx-auto pt-4 pb-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 mb-2">Templates</h1>

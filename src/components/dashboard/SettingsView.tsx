@@ -140,14 +140,14 @@ export default function SettingsView() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto py-8">
+      <div className="max-w-5xl mx-auto pt-4 pb-8">
         <div className="text-center py-12 text-zinc-500">Loading settings...</div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-8 space-y-6">
+    <div className="max-w-5xl mx-auto pt-4 pb-8 space-y-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold text-white">Settings</h1>
         <p className="text-zinc-400 text-sm mt-1">Posting defaults, notifications, and security.</p>

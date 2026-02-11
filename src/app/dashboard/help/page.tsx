@@ -22,7 +22,7 @@ const faqs = [
 
 export default function HelpPage() {
   return (
-    <div className="max-w-2xl mx-auto py-8 space-y-6">
+    <div className="max-w-2xl mx-auto pt-4 pb-8 space-y-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold text-white">Help</h1>
         <p className="text-zinc-400 text-sm mt-1">Answers to common questions.</p>

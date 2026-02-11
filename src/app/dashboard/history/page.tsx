@@ -222,7 +222,7 @@ function HistoryPageContent() {
   return (
     <PageGate>
       {/* Previous structure: filter tabs followed by full-width content cards. */}
-      <div className="max-w-6xl mx-auto py-8">
+      <div className="max-w-6xl mx-auto pt-4 pb-8">
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-semibold text-white mb-2">Your posts</h1>
           <p className="text-zinc-400 text-sm">Drafts, scheduled, and published content.</p>
@@ -351,7 +351,7 @@ function HistoryPageContent() {
 
 export default function HistoryPage() {
   return (
-    <Suspense fallback={<div className="max-w-6xl mx-auto py-8"><p className="text-zinc-500 text-sm">Loading…</p></div>}>
+    <Suspense fallback={<div className="max-w-6xl mx-auto pt-4 pb-8"><p className="text-zinc-500 text-sm">Loading…</p></div>}>
       <HistoryPageContent />
     </Suspense>
   );

@@ -12,7 +12,7 @@ export default function CalendarPage() {
     router.replace("/dashboard/schedule");
   }, [router]);
   return (
-    <div className="max-w-6xl mx-auto py-8">
+    <div className="max-w-6xl mx-auto pt-4 pb-8">
       <p className="text-zinc-500 text-sm">Loading…</p>
     </div>
   );

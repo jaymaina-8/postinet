@@ -156,7 +156,7 @@ export default function DashboardPage() {
   const showNeedsAttention = !loading && stats.failedCount > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-1">
       <div className="space-y-2">
         <h1 className="text-2xl sm:text-3xl font-semibold text-white">Welcome to Postinet AI</h1>
         <p className="text-zinc-400 text-sm sm:text-base">Upload once. Schedule or post instantly.</p>

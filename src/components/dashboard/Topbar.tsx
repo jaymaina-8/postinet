@@ -8,8 +8,8 @@ import { Logo } from "@/components/Logo";
 
 export default function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-zinc-900 bg-zinc-950/90 backdrop-blur">
-      <div className="flex items-center justify-between px-4 py-3 md:px-6">
+    <header className="sticky top-0 z-40 h-14 w-full shrink-0 border-b border-zinc-900 bg-zinc-950/90 backdrop-blur">
+      <div className="flex h-full items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-3">
           <button
             type="button"

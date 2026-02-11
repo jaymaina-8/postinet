@@ -372,7 +372,7 @@ export default function CreatePage() {
 
   return (
     <PageGate>
-      <div className="max-w-6xl mx-auto py-8 space-y-6">
+      <div className="max-w-6xl mx-auto pt-4 pb-8 space-y-6 sm:pt-5">
         <div>
           <h1 className="text-3xl font-semibold text-white">Create post</h1>
           <p className="text-zinc-400">Upload once, publish exactly once.</p>

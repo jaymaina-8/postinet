@@ -70,7 +70,7 @@ export default function AnalyticsPage() {
   const hasAnalytics = metrics.engagement > 0 || topPosts.length > 0;
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-6">
+    <div className="max-w-6xl mx-auto pt-4 pb-8 space-y-6">
       <div>
         <h1 className="text-3xl font-semibold text-white">Analytics</h1>
         <p className="text-zinc-400">Performance insights without the noise.</p>
