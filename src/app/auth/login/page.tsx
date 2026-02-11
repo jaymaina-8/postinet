@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import supabase from "@/lib/supabaseClient";
@@ -10,7 +10,7 @@ import { ContinueWithGoogleButton } from "@/components/auth/ContinueWithGoogleBu
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Button } from "@/components/ui/button";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -209,5 +209,21 @@ export default function LoginPage() {
         </Link>
       </p>
     </AuthPageShell>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthPageShell quote="" authorHandle="">
+          <div className="flex min-h-[200px] items-center justify-center text-zinc-400">
+            Loading…
+          </div>
+        </AuthPageShell>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }
