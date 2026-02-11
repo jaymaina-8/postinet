@@ -94,6 +94,7 @@ mustInclude("src/lib/supabase/client.ts", [
 ]);
 
 // 2) Explicitly forbid old manual session token plumbing in src/.
+// No exchangeCodeForSession on client - PKCE flow handles it via detectSessionInUrl.
 mustNotIncludeInSrc(
   [
     "session.access_token",
@@ -104,10 +105,35 @@ mustNotIncludeInSrc(
     "exchangeCodeForSession(",
   ],
   new Set([
-    "src/app/api/facebook/exchange/route.ts", // server callback
-    "src/app/auth/callback/page.tsx",         // Supabase PKCE callback (exchangeCodeForSession)
+    "src/app/api/facebook/exchange/route.ts", // server callback (Facebook, not Supabase)
   ])
 );
+
+// 2b) Forbid custom Google Sign-In OAuth endpoints - use Supabase Auth only.
+// YouTube OAuth (lib/youtube/) uses Google for YouTube API, not for auth - allowlist it.
+function mustNotIncludeCustomGoogleOAuth() {
+  const repoRoot = process.cwd();
+  const srcRoot = path.join(repoRoot, "src");
+  const files = walk(srcRoot).filter((p) => /\.(ts|tsx|js|jsx)$/.test(p));
+  const allowlist = new Set([
+    "src/lib/youtube/oauth.ts", // YouTube API OAuth, not Google Sign-In
+  ]);
+  const forbidden = [
+    "/api/google/", // custom Google auth API route
+    "accounts.google.com/v3/o/oauth2", // Google Identity (sign-in)
+  ];
+  for (const f of files) {
+    const rel = path.relative(repoRoot, f).replace(/\\/g, "/");
+    if (allowlist.has(rel)) continue;
+    const text = readText(f);
+    for (const needle of forbidden) {
+      if (text.includes(needle)) {
+        fail(`${rel} contains custom Google OAuth pattern: ${JSON.stringify(needle)}. Use Supabase Auth only.`);
+      }
+    }
+  }
+}
+mustNotIncludeCustomGoogleOAuth();
 
 // 3) OAuth initiation must be browser-only and Facebook redirectTo must be consistent.
 ensureFacebookOAuthIsClientOnly();

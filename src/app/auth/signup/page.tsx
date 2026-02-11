@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import supabase from "@/lib/supabaseClient";
+import { getRedirectUrl, isGoogleOAuthDisabled } from "@/lib/auth-utils";
 import { AuthPageShell } from "@/components/auth/AuthPageShell";
 import { ContinueWithGoogleButton } from "@/components/auth/ContinueWithGoogleButton";
 import { PasswordInput } from "@/components/auth/PasswordInput";
@@ -23,16 +24,20 @@ export default function SignupPage() {
   async function handleGoogleSignUp() {
     setGoogleLoading(true);
     setError("");
-    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "";
+    const redirectTo = getRedirectUrl("/auth/callback");
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
     });
     if (oauthError) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[auth] Google OAuth error:", oauthError.message);
+      }
       setError(oauthError.message || "Google sign-in failed.");
       setGoogleLoading(false);
       return;
     }
+    // OAuth will redirect away; no success state needed
   }
 
   async function handleSignup(e: React.FormEvent) {
@@ -101,6 +106,7 @@ export default function SignupPage() {
       <ContinueWithGoogleButton
         onClick={handleGoogleSignUp}
         loading={googleLoading}
+        disabled={isGoogleOAuthDisabled()}
       />
 
       <div className="relative my-6">

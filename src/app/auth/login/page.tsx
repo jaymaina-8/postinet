@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import supabase from "@/lib/supabaseClient";
+import { getRedirectUrl, isGoogleOAuthDisabled } from "@/lib/auth-utils";
 import { AuthPageShell } from "@/components/auth/AuthPageShell";
 import { ContinueWithGoogleButton } from "@/components/auth/ContinueWithGoogleButton";
 import { PasswordInput } from "@/components/auth/PasswordInput";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,19 +22,30 @@ export default function LoginPage() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
 
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err === "oauth_callback") {
+      setError("Google sign-in failed or session expired. Please try again.");
+    }
+  }, [searchParams]);
+
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
     setError("");
-    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "";
+    const redirectTo = getRedirectUrl("/auth/callback");
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
     });
     if (oauthError) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[auth] Google OAuth error:", oauthError.message);
+      }
       setError(oauthError.message || "Google sign-in failed.");
       setGoogleLoading(false);
       return;
     }
+    // OAuth will redirect away; no success state needed
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -104,6 +117,7 @@ export default function LoginPage() {
       <ContinueWithGoogleButton
         onClick={handleGoogleSignIn}
         loading={googleLoading}
+        disabled={isGoogleOAuthDisabled()}
       />
 
       <div className="relative my-6">

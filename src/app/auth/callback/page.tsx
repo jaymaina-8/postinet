@@ -6,10 +6,9 @@ import supabase from "@/lib/supabaseClient";
 
 /**
  * OAuth callback: Supabase redirects here after Google (or other provider) sign-in.
- * PKCE: we exchange the code for a session, then redirect to onboarding or dashboard.
- * Google client ID/secret are configured in Supabase Dashboard only; never in code.
- * In Supabase: Authentication → URL Configuration → Redirect URLs must include:
- *   https://your-domain.com/auth/callback and http://localhost:3000/auth/callback
+ * PKCE: Supabase client with detectSessionInUrl handles the code exchange automatically.
+ * We only call getSession() to ensure session is hydrated, then redirect.
+ * Do NOT call exchangeCodeForSession - it violates the PKCE-safe flow.
  */
 function CallbackContent() {
   const router = useRouter();
@@ -18,21 +17,29 @@ function CallbackContent() {
 
   useEffect(() => {
     async function handleCallback() {
-      const code = searchParams.get("code");
       const next = searchParams.get("next") ?? "/dashboard";
 
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) {
-          console.error("Auth callback error:", error);
-          setStatus("error");
-          return;
+      // PKCE: detectSessionInUrl parses the redirect URL and completes the exchange.
+      // Give the client a moment to hydrate; then getSession() returns the session.
+      let { data: { session }, error } = await supabase.auth.getSession();
+
+      // Retry once after a short delay (mobile Safari/Chrome may need more time)
+      if (!session && !error) {
+        await new Promise((r) => setTimeout(r, 300));
+        const retry = await supabase.auth.getSession();
+        session = retry.data.session;
+        error = retry.error;
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        if (session) {
+          console.log("[auth] oauth callback: session present");
+        } else {
+          console.log("[auth] oauth callback: missing session", error?.message ?? "");
         }
       }
-      // If no code, Supabase may have put tokens in the URL hash (detectSessionInUrl).
-      // getSession() will pick them up; give it a moment.
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+
+      if (error || !session) {
         setStatus("error");
         return;
       }
@@ -58,7 +65,10 @@ function CallbackContent() {
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-100">
         <div className="text-center">
           <p className="text-zinc-400">Sign-in failed or link expired.</p>
-          <a href="/auth/login" className="mt-4 inline-block text-emerald-400 hover:underline">
+          <a
+            href="/auth/login?error=oauth_callback"
+            className="mt-4 inline-block text-emerald-400 hover:underline"
+          >
             Back to sign in
           </a>
         </div>
@@ -75,11 +85,13 @@ function CallbackContent() {
 
 export default function AuthCallbackPage() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400">
-        <p>Loading…</p>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400">
+          <p>Loading…</p>
+        </div>
+      }
+    >
       <CallbackContent />
     </Suspense>
   );
