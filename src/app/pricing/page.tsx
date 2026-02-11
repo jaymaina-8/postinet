@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
-import { LandingFooter } from "@/components/landing";
+import { LandingNav, LandingFooter } from "@/components/landing";
 import { PricingSection } from "./PricingSection";
 
 export const metadata: Metadata = {
@@ -15,7 +14,7 @@ const FREE_MONTHLY_POSTS = 15;
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <Navbar />
+      <LandingNav />
 
       {/* Hero — value first, no pricing in hero */}
       <section className="relative pt-28 pb-16 px-4 sm:px-6 lg:px-8">

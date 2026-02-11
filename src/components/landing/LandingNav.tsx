@@ -94,16 +94,27 @@ export function LandingNav() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   const closeAll = () => {
     setActiveDropdown(null);
     setOpen(false);
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b border-white/5 bg-[#0a0a0a]/95 backdrop-blur-sm">
-      <nav ref={navRef} className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6" aria-label="Main">
-        {/* Logo — top left */}
-        <Link href="/" className="flex items-center gap-2 shrink-0 order-first" onClick={closeAll}>
+    <header className="fixed top-0 left-0 right-0 z-50 h-14 w-full border-b border-white/5 bg-[#0a0a0a]/95 backdrop-blur-sm">
+      <nav ref={navRef} className="flex h-full w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8" aria-label="Main">
+        {/* Logo — left */}
+        <Link href="/" className="flex items-center gap-2 shrink-0" onClick={closeAll}>
           <Logo showName />
         </Link>
 
@@ -187,8 +198,8 @@ export function LandingNav() {
           </Link>
         </div>
 
-        {/* Sign in / Sign up — top right (desktop and mobile) */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0 order-last">
+        {/* Sign in / Sign up — top right */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
           {signedIn ? (
             <Link href="/dashboard" onClick={closeAll} className="text-sm text-zinc-300 hover:text-white transition-colors">
               My dashboard
@@ -230,7 +241,7 @@ export function LandingNav() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="lg:hidden absolute top-14 left-0 right-0 border-b border-white/5 bg-zinc-900 py-4 px-4 max-h-[80vh] overflow-y-auto">
+        <div className="lg:hidden absolute top-14 left-0 right-0 border-b border-white/5 bg-zinc-900 py-4 px-4 max-h-[calc(100vh-3.5rem)] overflow-y-auto shadow-lg">
           <div className="flex flex-col gap-2">
             <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-2 mb-1">Features</div>
             {FEATURES.map((f, i) => (
