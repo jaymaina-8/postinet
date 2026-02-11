@@ -326,11 +326,6 @@ export default function CreateContentPage() {
   return (
     <PageGate>
       <div className="max-w-6xl mx-auto pt-4 pb-8 space-y-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold text-white">Post composer</h1>
-          <p className="text-zinc-400">Write once, publish everywhere.</p>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_0.7fr] gap-6">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-6">
             <div>

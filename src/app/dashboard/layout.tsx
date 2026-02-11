@@ -2,7 +2,7 @@
 
 /**
  * Dashboard composition map:
- * - This layout: auth check, PageScopeProvider, Topbar, Sidebar (desktop lg), MobileSidebarDrawer (mobile), PageContextBar, main content.
+ * - This layout: auth check, PageScopeProvider, Topbar, Sidebar (desktop lg), MobileSidebarDrawer (mobile), main content.
  * - BottomNav: mobile-only, fixed bottom (see components/dashboard/BottomNav.tsx).
  * - Home: src/app/dashboard/page.tsx. Other routes: dashboard/{create,schedule,history,accounts,profile,settings,help,billing}/page.tsx.
  */
@@ -13,7 +13,6 @@ import { PageScopeProvider } from "@/components/PageScope";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
 import MobileSidebarDrawer from "@/components/dashboard/MobileSidebarDrawer";
-import PageContextBar from "@/components/dashboard/PageContextBar";
 import BottomNav from "@/components/dashboard/BottomNav";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -115,9 +114,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Sidebar onNavigate={() => setMobileNavOpen(false)} />
           </MobileSidebarDrawer>
           <main className="flex-1 overflow-auto px-4 pt-2 pb-20 sm:px-6 lg:px-8 lg:pb-6">
-            <div className="sticky top-14 z-10 bg-zinc-950 pb-2 pt-0 backdrop-blur md:static md:pb-3">
-              <PageContextBar />
-            </div>
             {children}
           </main>
         </div>
