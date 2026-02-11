@@ -1,2 +1,20 @@
 @import "tailwindcss";
 
+/* Social proof marquees — infinite scroll (duplicated content = 50% = one set) */
+@keyframes marquee-creators {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-companies {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}

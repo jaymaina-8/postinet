@@ -1,18 +1,20 @@
 import {
   LandingNav,
   Hero,
+  SocialProof,
   HowItWorks,
   Benefits,
   Platforms,
   Reliability,
   CTAStrip,
+  FAQ,
   LandingFooter,
 } from "@/components/landing";
 
 /**
- * Landing page (/) — MVP, high-trust, "magic on first open".
- * Core message: "Upload once. Schedule or post instantly to Facebook + YouTube."
- * No AI sections, no fake testimonials. Links: /pricing, /auth/login, /auth/signup, /dashboard (when logged in).
+ * Landing page (/) — Opus-inspired, peace-of-mind story.
+ * Nav: Features, Solutions, Resources, Pricing + Sign in / Sign up - It's FREE.
+ * Hero: "Post with peace of mind." Sections: How it works, Why Postinet, Platforms, Trust, FAQ, CTA.
  */
 export default function LandingPage() {
   return (
@@ -20,10 +22,12 @@ export default function LandingPage() {
       <LandingNav />
       <main>
         <Hero />
+        <SocialProof />
         <HowItWorks />
         <Benefits />
         <Platforms />
         <Reliability />
+        <FAQ />
         <CTAStrip />
       </main>
       <LandingFooter />
