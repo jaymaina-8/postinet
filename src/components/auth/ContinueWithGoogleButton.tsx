@@ -12,7 +12,8 @@ export function ContinueWithGoogleButton({ onClick, disabled, loading }: Continu
   return (
     <Button
       type="button"
-      className="w-full h-11 rounded-lg border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 font-medium"
+      variant="outline"
+      className="w-full h-11 rounded-lg border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 font-medium"
       onClick={onClick}
       disabled={disabled || loading}
     >
