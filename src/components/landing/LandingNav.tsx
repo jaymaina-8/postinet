@@ -101,13 +101,14 @@ export function LandingNav() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b border-white/5 bg-[#0a0a0a]/95 backdrop-blur-sm">
-      <nav ref={navRef} className="mx-auto flex h-full max-w-6xl items-center justify-between px-4 sm:px-6" aria-label="Main">
-        <Link href="/" className="flex items-center gap-2 shrink-0" onClick={closeAll}>
+      <nav ref={navRef} className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6" aria-label="Main">
+        {/* Logo — top left */}
+        <Link href="/" className="flex items-center gap-2 shrink-0 order-first" onClick={closeAll}>
           <Logo showName />
         </Link>
 
         {/* Desktop: center nav with dropdowns */}
-        <div className="hidden lg:flex items-center gap-1">
+        <div className="hidden lg:flex items-center gap-1 flex-1 justify-center">
           <div className="relative">
             <button
               type="button"
@@ -186,46 +187,45 @@ export function LandingNav() {
           </Link>
         </div>
 
-        {/* Desktop: right actions */}
-        <div className="hidden lg:flex items-center gap-3">
+        {/* Sign in / Sign up — top right (desktop and mobile) */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 order-last">
           {signedIn ? (
             <Link href="/dashboard" onClick={closeAll} className="text-sm text-zinc-300 hover:text-white transition-colors">
               My dashboard
             </Link>
           ) : (
             <>
-              <Link href="/auth/login" onClick={closeAll} className="text-sm text-zinc-300 hover:text-white transition-colors">
+              <Link href="/auth/login" onClick={closeAll} className="text-sm text-zinc-300 hover:text-white transition-colors hidden sm:inline">
                 Sign in
               </Link>
               <Link
                 href="/auth/signup"
                 onClick={closeAll}
-                className="inline-flex items-center justify-center rounded-lg border border-white bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors"
+                className="inline-flex items-center justify-center rounded-lg border border-white bg-white px-3 py-2 sm:px-4 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors"
               >
-                Sign up - It&apos;s FREE
+                Sign up
               </Link>
             </>
           )}
+          {/* Mobile menu button */}
+          <button
+            type="button"
+            className="lg:hidden p-2 text-zinc-400 hover:text-white"
+            onClick={() => setOpen(!open)}
+            aria-label="Toggle menu"
+            aria-expanded={open}
+          >
+            {open ? (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
-
-        {/* Mobile menu button */}
-        <button
-          type="button"
-          className="lg:hidden p-2 text-zinc-400 hover:text-white"
-          onClick={() => setOpen(!open)}
-          aria-label="Toggle menu"
-          aria-expanded={open}
-        >
-          {open ? (
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          ) : (
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          )}
-        </button>
       </nav>
 
       {/* Mobile menu */}

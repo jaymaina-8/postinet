@@ -4,6 +4,7 @@ const COMPANY = [
   { label: "About us", href: "/about" },
   { label: "Careers", href: "/careers" },
   { label: "Contact us", href: "mailto:support@postinet.pro" },
+  { label: "Blog", href: "/blog" },
 ];
 
 const PRODUCT = [
@@ -14,22 +15,9 @@ const PRODUCT = [
 ];
 
 const RESOURCES = [
-  { label: "Blog", href: "/blog" },
   { label: "Scheduling tips", href: "/blog#tips" },
   { label: "Help center", href: "/dashboard/help" },
   { label: "Contact", href: "mailto:support@postinet.pro" },
-];
-
-const BEST_PRACTICES = [
-  { label: "How to schedule posts without the stress", href: "/blog#schedule" },
-  { label: "One content, multiple platforms", href: "/blog#multi-platform" },
-];
-
-const TRUST_LEGAL = [
-  { label: "Terms and Conditions", href: "/terms" },
-  { label: "Privacy Policy", href: "/privacy" },
-  { label: "Cookies", href: "/privacy#cookies" },
-  { label: "Accessibility", href: "/accessibility" },
 ];
 
 const SOCIAL = [
@@ -77,9 +65,9 @@ export function LandingFooter() {
   return (
     <footer className="border-t border-white/5 bg-zinc-900/50">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-14">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-8 sm:gap-10">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 sm:gap-10">
           <div>
-            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">Company</h3>
+            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Company</h3>
             <ul className="space-y-2.5">
               {COMPANY.map(({ label, href }) => (
                 <li key={label}>
@@ -93,7 +81,7 @@ export function LandingFooter() {
             </ul>
           </div>
           <div>
-            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">Product</h3>
+            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Product</h3>
             <ul className="space-y-2.5">
               {PRODUCT.map(({ label, href }) => (
                 <li key={label}>
@@ -107,13 +95,11 @@ export function LandingFooter() {
             </ul>
           </div>
           <div>
-            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">Resources</h3>
+            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Resources</h3>
             <ul className="space-y-2.5">
               {RESOURCES.map(({ label, href }) => (
                 <li key={label}>
                   {href.startsWith("mailto:") ? (
-                    <a href={href} className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">{label}</a>
-                  ) : href.startsWith("#") ? (
                     <a href={href} className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">{label}</a>
                   ) : (
                     <Link href={href} className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">{label}</Link>
@@ -122,47 +108,27 @@ export function LandingFooter() {
               ))}
             </ul>
           </div>
-          <div>
-            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">Best practices</h3>
-            <ul className="space-y-2.5">
-              {BEST_PRACTICES.map(({ label, href }) => (
-                <li key={label}>
-                  <Link href={href} className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">{label}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">Trust and legal</h3>
-            <ul className="space-y-2.5">
-              {TRUST_LEGAL.map(({ label, href }) => (
-                <li key={label}>
-                  <Link href={href} className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">{label}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
 
         <div className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-            <p className="text-xs text-zinc-500">
-              © {year} Postinet AI. All rights reserved.
-            </p>
-            <div className="flex items-center gap-4">
-              {SOCIAL.map(({ label, href, icon }) => (
-                <a
-                  key={icon}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-zinc-500 hover:text-zinc-300 transition-colors"
-                  aria-label={label}
-                >
-                  <SocialIcon name={icon} />
-                </a>
-              ))}
-            </div>
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-2 text-xs text-zinc-500">
+            <span>© {year} Postinet AI. All rights reserved.</span>
+            <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-zinc-300 transition-colors">Privacy Policy</Link>
+          </div>
+          <div className="flex items-center gap-4">
+            {SOCIAL.map(({ label, href, icon }) => (
+              <a
+                key={icon}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                aria-label={label}
+              >
+                <SocialIcon name={icon} />
+              </a>
+            ))}
           </div>
         </div>
       </div>

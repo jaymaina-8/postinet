@@ -1,11 +1,13 @@
 "use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import supabase from "@/lib/supabaseClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthPageShell } from "@/components/auth/AuthPageShell";
+import { ContinueWithGoogleButton } from "@/components/auth/ContinueWithGoogleButton";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,7 +33,6 @@ export default function LoginPage() {
       setGoogleLoading(false);
       return;
     }
-    // Redirect happens via Supabase; keep loading state until leave
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -40,30 +41,27 @@ export default function LoginPage() {
     setError("");
     setNeedsConfirmation(false);
     setResendSuccess(false);
-    
+
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    
+
     if (error) {
-      // Check if error is due to unconfirmed email
       if (error.message.includes("Email not confirmed") || error.message.includes("email_not_confirmed")) {
         setNeedsConfirmation(true);
-        setError(""); // Clear error, we'll show it in the confirmation box
+        setError("");
       } else {
         setError(error.message || "Invalid login credentials");
       }
       setLoading(false);
-      console.error("Login error:", error);
       return;
     }
 
     if (data?.user) {
-      // Check onboarding status
       const { data: profile } = await supabase
         .from("user_profile")
         .select("onboarded")
         .eq("id", data.user.id)
         .single();
-      
+
       if (!profile?.onboarded) {
         router.push("/onboarding");
       } else {
@@ -80,106 +78,121 @@ export default function LoginPage() {
       setError("Please enter your email address first.");
       return;
     }
-    
     setResendLoading(true);
     setResendSuccess(false);
     setError("");
-    
     const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email,
+      type: "signup",
+      email,
       options: {
-        emailRedirectTo: `${(process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || window.location.origin)}/dashboard`
-      }
+        emailRedirectTo: `${(process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || window.location.origin)}/dashboard`,
+      },
     });
-    
     setResendLoading(false);
-    
-    if (error) {
-      setError(error.message);
-    } else {
-      setResendSuccess(true);
-    }
+    if (error) setError(error.message);
+    else setResendSuccess(true);
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Sign In</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full mb-4"
-            onClick={handleGoogleSignIn}
-            disabled={googleLoading}
+    <AuthPageShell
+      quote="Where has Postinet been all my life? Scheduling and publishing in one place — finally."
+      authorHandle="@postinet_fan"
+    >
+      <h1 className="text-2xl font-semibold text-white">Welcome back</h1>
+      <p className="text-zinc-400 mt-1 mb-8">Sign in to your account</p>
+
+      <ContinueWithGoogleButton
+        onClick={handleGoogleSignIn}
+        loading={googleLoading}
+      />
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-zinc-700" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-zinc-950 px-3 text-sm text-zinc-500">or</span>
+        </div>
+      </div>
+
+      <form onSubmit={handleLogin} className="space-y-4">
+        <div className="space-y-2">
+          <label htmlFor="email" className="block text-sm font-medium text-white">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder="you@example.com"
+            className="w-full rounded-lg border border-zinc-600 bg-zinc-800/80 px-3 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <label htmlFor="password" className="block text-sm font-medium text-white shrink-0">
+            Password
+          </label>
+          <Link
+            href="/auth/forgot-password"
+            className="text-sm text-zinc-400 hover:text-zinc-300 transition-colors shrink-0"
           >
-            {googleLoading ? "Redirecting…" : "Continue with Google"}
-          </Button>
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-zinc-200" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-zinc-500">or</span>
+            Forgot password?
+          </Link>
+        </div>
+        <PasswordInput
+          id="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          autoComplete="current-password"
+          placeholder="••••••••"
+        />
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        {needsConfirmation && (
+          <div className="space-y-3 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
+            <div className="text-sm font-semibold text-amber-200">Email confirmation required</div>
+            <div className="text-sm text-amber-200/90 space-y-3">
+              <p>
+                Check your inbox for a confirmation link, or use the Supabase Dashboard to confirm the user.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white border-0"
+                onClick={handleResendConfirmation}
+                disabled={resendLoading || !email}
+              >
+                {resendLoading ? "Sending…" : resendSuccess ? "✓ Email sent!" : "Resend confirmation email"}
+              </Button>
+              {resendSuccess && (
+                <p className="text-xs text-emerald-400">Confirmation email sent. Check your inbox.</p>
+              )}
+              <p className="text-xs pt-2 border-t border-amber-500/20">
+                Can&apos;t access email?{" "}
+                <Link href="/auth/signup" className="underline font-medium">Create a new account</Link> (confirmation may be disabled).
+              </p>
             </div>
           </div>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required />
-            </div>
-            {error && <div className="text-destructive text-sm">{error}</div>}
-            {needsConfirmation && (
-              <div className="space-y-3 p-4 bg-amber-50 rounded-md border border-amber-200">
-                <div className="text-sm font-semibold text-amber-900 mb-2">
-                  ⚠️ Email Confirmation Required
-                </div>
-                <div className="text-sm text-amber-800 space-y-3">
-                  <div>
-                    <strong className="block mb-1">Quick Fix (Recommended):</strong>
-                    <p className="text-xs mb-2">
-                      Go to your <a href="https://app.supabase.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">Supabase Dashboard</a> → Authentication → Users → Find user <strong>{email}</strong> → Click ⋮ menu → "Confirm User"
-                    </p>
-                  </div>
-                  <div className="pt-2 border-t border-amber-200">
-                    <strong className="block mb-1">Or check your email:</strong>
-                    <p className="text-xs mb-2">
-                      Look for a confirmation email and click the link inside.
-                    </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs"
-                      onClick={handleResendConfirmation}
-                      disabled={resendLoading || !email}
-                    >
-                      {resendLoading ? "Sending..." : resendSuccess ? "✓ Email Sent!" : "Resend Confirmation Email"}
-                    </Button>
-                    {resendSuccess && (
-                      <div className="text-xs text-green-700 mt-2 font-medium">
-                        ✓ Confirmation email sent! Check your inbox.
-                      </div>
-                    )}
-                  </div>
-                  <div className="pt-2 border-t border-amber-200 text-xs">
-                    <p className="mb-1"><strong>Note:</strong> If you can't access the email or Supabase dashboard, you can:</p>
-                    <p>Delete this account and <a href="/auth/signup" className="underline font-medium">create a new one</a> (email confirmation is now disabled for new accounts).</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            <Button className="w-full" type="submit" disabled={loading}>{loading ? "Signing in..." : "Sign In"}</Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full h-11 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+        >
+          {loading ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
+
+      <p className="text-sm text-zinc-400 mt-6">
+        Don&apos;t have an account?{" "}
+        <Link href="/auth/signup" className="text-emerald-400 hover:text-emerald-300 font-medium underline">
+          Sign up
+        </Link>
+      </p>
+    </AuthPageShell>
   );
 }
