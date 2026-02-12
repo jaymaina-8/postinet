@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import supabase from "@/lib/supabaseClient";
 
 type Frequency = "weekly_1_2" | "weekly_3_5" | "daily" | "multi_daily";
@@ -302,6 +303,22 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-3xl px-4 pt-8 pb-28 sm:pb-10 sm:pt-10">
+        {/* App name + logo (HeyGen-style branding at top) */}
+        <div className="flex items-center justify-center gap-2.5 mb-6">
+          <span className="text-xl sm:text-2xl font-semibold text-white tracking-tight">
+            Postinet AI
+          </span>
+          <Image
+            src="/logo.png"
+            alt=""
+            width={32}
+            height={32}
+            className="shrink-0"
+            priority
+            aria-hidden
+          />
+        </div>
+
         {/* Top progress (HeyGen-inspired: thin bar + compact steps) */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
