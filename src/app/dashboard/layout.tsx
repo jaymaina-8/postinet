@@ -8,7 +8,7 @@
  */
 import React, { ReactNode, useEffect, useState } from "react";
 import supabase from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { PageScopeProvider } from "@/components/PageScope";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
@@ -17,6 +17,7 @@ import BottomNav from "@/components/dashboard/BottomNav";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -60,7 +61,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         // Check onboarding status
         const { data: profile, error: profileError } = await supabase
           .from("user_profile")
-          .select("onboarded")
+          .select("onboarding_complete,onboarding_testing,onboarding_platforms,onboarded")
           .eq("id", user.id)
           .single();
         
@@ -71,9 +72,46 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           return;
         }
         
-        if (!profile?.onboarded) {
+        const onboardingComplete = (profile as any)?.onboarding_complete ?? (profile as any)?.onboarded ?? false;
+        if (!onboardingComplete) {
           router.push("/onboarding");
           return;
+        }
+
+        // Enforce: selected platform(s) but no connected accounts (avoid loops; allow accounts page)
+        const onboardingTesting = (profile as any)?.onboarding_testing ?? false;
+        const selectedPlatforms: string[] = Array.isArray((profile as any)?.onboarding_platforms)
+          ? (profile as any).onboarding_platforms
+          : [];
+        const enforceable = selectedPlatforms.filter((p) => p === "facebook" || p === "youtube");
+        const onAccountsPage = pathname?.startsWith("/dashboard/accounts");
+
+        if (!onAccountsPage && !onboardingTesting && enforceable.length > 0) {
+          const [{ data: fbRows }, { data: ytRows }] = await Promise.all([
+            enforceable.includes("facebook")
+              ? supabase
+                  .from("connected_accounts")
+                  .select("id, facebook_page_access_token")
+                  .eq("user_id", user.id)
+                  .eq("platform", "facebook")
+              : Promise.resolve({ data: [] as any[] }),
+            enforceable.includes("youtube")
+              ? supabase
+                  .from("platform_accounts")
+                  .select("id")
+                  .eq("user_id", user.id)
+                  .eq("platform", "youtube")
+              : Promise.resolve({ data: [] as any[] }),
+          ]);
+
+          const fbConnected = (fbRows || []).some((r: any) => r.facebook_page_access_token != null);
+          const ytConnected = (ytRows || []).length > 0;
+          const hasAny = fbConnected || ytConnected;
+
+          if (!hasAny) {
+            router.push("/dashboard/accounts?onboarding=1");
+            return;
+          }
         }
         
         setIsAuthenticated(true);
@@ -85,7 +123,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
     
     checkAuth();
-  }, [router]);
+  }, [router, pathname]);
 
   // CRITICAL: Never redirect during loading - wait for session hydration
   // This prevents redirects during OAuth callback before session is restored

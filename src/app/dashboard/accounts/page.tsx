@@ -31,6 +31,7 @@ function AccountsPageContent() {
   const youtubeConnected = searchParams.get("youtube");
   const facebookError = searchParams.get("facebook_error");
   const youtubeError = searchParams.get("youtube_error");
+  const onboarding = searchParams.get("onboarding") === "1";
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -314,6 +315,17 @@ function AccountsPageContent() {
           Connect and secure your publishing destinations.
         </p>
       </div>
+
+      {onboarding && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+          <p className="text-emerald-200 font-medium">
+            One more step: connect at least one selected platform to continue.
+          </p>
+          <p className="text-emerald-200/80 text-sm mt-1">
+            After connecting, you’ll be able to access the rest of your dashboard.
+          </p>
+        </div>
+      )}
 
       {/* Success/Error Messages */}
       {success && (

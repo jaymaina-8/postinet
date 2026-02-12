@@ -46,6 +46,13 @@ type RecentPost = {
   created_at: string;
 };
 
+type OnboardingProfile = {
+  onboarding_goal: string | null;
+  onboarding_frequency: string | null;
+  onboarding_creation_style: string | null;
+  onboarding_testing: boolean | null;
+};
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<UserStats>({
     hasConnectedAccounts: false,
@@ -62,10 +69,40 @@ export default function DashboardPage() {
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [onboarding, setOnboarding] = useState<OnboardingProfile | null>(null);
 
   useEffect(() => {
     fetchStats();
   }, []);
+
+  function getPersonalizedHeader(goal: string | null): { title: string; subtitle: string } {
+    switch (goal) {
+      case "consistency":
+        return { title: "Let’s build your posting streak.", subtitle: "Upload once. Schedule or post instantly." };
+      case "grow_followers":
+        return { title: "Post smarter. Grow faster.", subtitle: "Upload once. Schedule or post instantly." };
+      case "monetize":
+        return { title: "More posts. More revenue opportunities.", subtitle: "Upload once. Schedule or post instantly." };
+      case "manage_clients":
+        return { title: "Manage content without chaos.", subtitle: "Upload once. Schedule or post instantly." };
+      default:
+        return { title: "Welcome to Postinet AI", subtitle: "Upload once. Schedule or post instantly." };
+    }
+  }
+
+  function getPrimaryCtaLabel(style: string | null): string {
+    switch (style) {
+      case "edited_videos":
+        return "Upload media";
+      case "repurpose":
+        return "Upload long video";
+      // Bulk upload doesn't exist yet in-app; keep the default.
+      case "manage_clients":
+        return "Upload media";
+      default:
+        return "Start a post";
+    }
+  }
 
   async function fetchStats() {
     try {
@@ -75,6 +112,16 @@ export default function DashboardPage() {
       if (!session) {
         setLoading(false);
         return;
+      }
+
+      // Onboarding personalization (lightweight)
+      const profileRes = await supabase
+        .from("user_profile")
+        .select("onboarding_goal,onboarding_frequency,onboarding_creation_style,onboarding_testing")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      if (!profileRes.error) {
+        setOnboarding((profileRes.data || null) as OnboardingProfile | null);
       }
 
       let accounts: ConnectedAccount[] = [];
@@ -154,15 +201,17 @@ export default function DashboardPage() {
   const showConnectHint = !loading && !stats.hasConnectedAccounts;
   const showUploadHint = !loading && stats.hasConnectedAccounts && recentPosts.length === 0;
   const showNeedsAttention = !loading && stats.failedCount > 0;
+  const header = getPersonalizedHeader(onboarding?.onboarding_goal ?? null);
+  const primaryLabel = getPrimaryCtaLabel(onboarding?.onboarding_creation_style ?? null);
 
   return (
     <div className="space-y-6 pt-1">
       <div className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-white">Welcome to Postinet AI</h1>
-        <p className="text-zinc-400 text-sm sm:text-base">Upload once. Schedule or post instantly.</p>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-white">{header.title}</h1>
+        <p className="text-zinc-400 text-sm sm:text-base">{header.subtitle}</p>
       </div>
 
-      <PrimaryActionCard />
+      <PrimaryActionCard primaryLabel={primaryLabel} />
 
       <div className="flex flex-wrap gap-2">
         <Link
