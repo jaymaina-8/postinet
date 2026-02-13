@@ -3,6 +3,7 @@ export { Hero } from "./Hero";
 export { SocialProof } from "./SocialProof";
 export { HowItWorks } from "./HowItWorks";
 export { Benefits } from "./Benefits";
+export { Testimonials } from "./Testimonials";
 export { Platforms } from "./Platforms";
 export { Reliability } from "./Reliability";
 export { CTAStrip } from "./CTAStrip";

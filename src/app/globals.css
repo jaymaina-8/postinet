@@ -18,3 +18,26 @@
     transform: translateX(0);
   }
 }
+
+/* Testimonials marquee — moves left (content flows left to right) */
+@keyframes testimonial-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+.animate-testimonial-marquee {
+  animation: testimonial-marquee 45s linear infinite;
+}
+.animate-testimonial-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Pause social proof marquees on hover */
+.marquee-pause-on-hover:hover .marquee-track-creators,
+.marquee-pause-on-hover:hover .marquee-track-companies {
+  animation-play-state: paused;
+}
+

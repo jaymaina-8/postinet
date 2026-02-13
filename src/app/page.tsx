@@ -3,7 +3,7 @@ import {
   Hero,
   SocialProof,
   HowItWorks,
-  Benefits,
+  Testimonials,
   Platforms,
   Reliability,
   CTAStrip,
@@ -24,7 +24,7 @@ export default function LandingPage() {
         <Hero />
         <SocialProof />
         <HowItWorks />
-        <Benefits />
+        <Testimonials />
         <Platforms />
         <Reliability />
         <FAQ />
