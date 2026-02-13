@@ -107,10 +107,7 @@ function LoginContent() {
   }
 
   return (
-    <AuthPageShell
-      quote="Where has Postinet been all my life? Scheduling and publishing in one place — finally."
-      authorHandle="@postinet_fan"
-    >
+    <AuthPageShell>
       <h1 className="text-2xl font-semibold text-white">Welcome back</h1>
       <p className="text-zinc-400 mt-1 mb-8">Sign in to your account</p>
 

@@ -96,10 +96,7 @@ export default function SignupPage() {
   }
 
   return (
-    <AuthPageShell
-      quote="Very impressed by Postinet's growth. For new creators and small teams, they've gone from 'promising' to 'standard' in remarkably short order."
-      authorHandle="@social_creator"
-    >
+    <AuthPageShell>
       <h1 className="text-2xl font-semibold text-white">Get started</h1>
       <p className="text-zinc-400 mt-1 mb-8">Create a new account</p>
 
