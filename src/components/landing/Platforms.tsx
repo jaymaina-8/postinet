@@ -1,5 +1,13 @@
+const STATS = [
+  { value: "12M+", label: "Creators" },
+  { value: "1M+", label: "Posts scheduled" },
+  { value: "2K+", label: "Projects" },
+  { value: "50+", label: "Countries" },
+];
+
 /**
  * Supported platforms: Facebook + YouTube (active). Instagram, TikTok coming soon (muted, not clickable).
+ * Includes a stats strip below (creators, posts, projects, countries).
  */
 export function Platforms() {
   return (
@@ -35,6 +43,16 @@ export function Platforms() {
             <span className="text-sm font-medium">TikTok</span>
             <span className="text-xs text-zinc-600">Coming soon</span>
           </div>
+        </div>
+
+        {/* Stats strip — large number + label per column */}
+        <div className="mt-14 sm:mt-20 grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-6 text-center">
+          {STATS.map(({ value, label }) => (
+            <div key={label} className="flex flex-col items-center justify-center">
+              <div className="text-3xl sm:text-4xl font-bold text-white tabular-nums">{value}</div>
+              <div className="mt-1 text-sm font-medium text-zinc-400">{label}</div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
