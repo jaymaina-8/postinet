@@ -191,9 +191,9 @@ function HistoryPageContent() {
   function getStatusBadge(status: string) {
     const styles: Record<string, string> = {
       draft: 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/30',
-      scheduled: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+      scheduled: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
       published: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
-      failed: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+      failed: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
       cancelled: 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/30',
       publishing: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
       uploading: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',

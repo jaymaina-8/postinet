@@ -25,7 +25,7 @@ export default function ThisWeekStats({
         </div>
         <div className="flex items-center justify-between">
           <span className="text-zinc-400">Needs attention</span>
-          <Link href="/dashboard/history?filter=failed" className="text-amber-300 hover:text-amber-200 font-semibold">
+          <Link href="/dashboard/history?filter=failed" className="text-emerald-300 hover:text-emerald-200 font-semibold">
             {failedCount}
           </Link>
         </div>

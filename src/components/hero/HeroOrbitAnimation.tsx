@@ -52,6 +52,8 @@ function curvedPathFromCenter(
 export interface HeroOrbitAnimationProps {
   variant?: "light" | "dark";
   platforms?: PlatformItem[];
+  /** When false, hides the floating pop-up cards (e.g. "Grow faster", "Save time"). */
+  showFloatingCards?: boolean;
 }
 
 const floatingCardMessages = [
@@ -74,11 +76,13 @@ function hexagonPath(r: number) {
 export function HeroOrbitAnimation({
   variant = "dark",
   platforms = DEFAULT_PLATFORMS,
+  showFloatingCards = false,
 }: HeroOrbitAnimationProps) {
   const reduceMotion = useReducedMotion();
   const [radius, setRadius] = useState<number>(RADII.desktop);
   const [nodeCount, setNodeCount] = useState(6);
   const [cardCount, setCardCount] = useState<number>(FLOATING_CARD_COUNTS.desktop);
+  const effectiveCardCount = showFloatingCards ? cardCount : 0;
   const [parallax, setParallax] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -382,8 +386,8 @@ export function HeroOrbitAnimation({
           ))}
         </motion.div>
 
-        {/* Floating signal cards */}
-        {Array.from({ length: cardCount }).map((_, i) => (
+        {/* Floating signal cards (hidden when showFloatingCards is false) */}
+        {Array.from({ length: effectiveCardCount }).map((_, i) => (
           <FloatingCard
             key={i}
             index={i}

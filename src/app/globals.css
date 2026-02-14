@@ -41,3 +41,18 @@
   animation-play-state: paused;
 }
 
+/* Next.js portal: keep out of layout flow and prevent overflow issues */
+nextjs-portal {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+nextjs-portal > * {
+  pointer-events: auto;
+}
+

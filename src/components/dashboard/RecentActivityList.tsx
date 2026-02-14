@@ -13,8 +13,8 @@ type RecentPost = {
 // Creator-friendly labels: Draft→Needs finishing, Scheduled→Going out, Failed→Needs attention, Published→Live
 const statusStyles: Record<string, string> = {
   "needs finishing": "bg-zinc-500/20 text-zinc-300 border border-zinc-500/30",
-  "going out": "bg-amber-500/20 text-amber-300 border border-amber-500/30",
-  "needs attention": "bg-amber-500/20 text-amber-300 border border-amber-500/30",
+  "going out": "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
+  "needs attention": "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
   live: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
 };
 

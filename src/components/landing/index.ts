@@ -8,4 +8,5 @@ export { Platforms } from "./Platforms";
 export { Reliability } from "./Reliability";
 export { CTAStrip } from "./CTAStrip";
 export { FAQ } from "./FAQ";
+export { ContactAccordion } from "./ContactAccordion";
 export { LandingFooter } from "./LandingFooter";

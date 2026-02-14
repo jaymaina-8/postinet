@@ -2,22 +2,22 @@ import Link from "next/link";
 
 const COMPANY = [
   { label: "About us", href: "/about" },
-  { label: "Careers", href: "/careers" },
-  { label: "Contact us", href: "mailto:support@postinet.pro" },
+  { label: "Contact us", href: "/contact" },
   { label: "Blog", href: "/blog" },
 ];
 
 const PRODUCT = [
-  { label: "Features", href: "#how-it-works" },
-  { label: "How it works", href: "#how-it-works" },
+  { label: "Features", href: "/#how-it-works" },
   { label: "Pricing", href: "/pricing" },
   { label: "Help center", href: "/dashboard/help" },
+  { label: "Feature Request", href: "/feature-request" },
+  { label: "How does Postinet AI work", href: "/#how-it-works" },
 ];
 
 const RESOURCES = [
   { label: "Scheduling tips", href: "/blog#tips" },
   { label: "Help center", href: "/dashboard/help" },
-  { label: "Contact", href: "mailto:support@postinet.pro" },
+  { label: "Contact", href: "/contact" },
 ];
 
 const SOCIAL = [

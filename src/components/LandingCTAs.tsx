@@ -32,7 +32,7 @@ export function HeroCTAs() {
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
         <Link
           href="/dashboard"
-          className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-8 py-4 rounded-full font-semibold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-emerald-500/25"
+          className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-emerald-500/25"
         >
           My dashboard
         </Link>
@@ -51,7 +51,7 @@ export function HeroCTAs() {
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
         <Link
           href="/auth/signup"
-          className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-8 py-4 rounded-full font-semibold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-emerald-500/25 text-center"
+          className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-emerald-500/25 text-center"
         >
           Get started free
         </Link>
@@ -96,7 +96,7 @@ export function FinalCTA() {
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
         <Link
           href="/dashboard"
-          className="inline-block bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-10 py-4 rounded-full font-semibold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-emerald-500/25"
+          className="inline-block bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-10 py-4 rounded-full font-semibold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-emerald-500/25"
         >
           My dashboard
         </Link>
@@ -114,7 +114,7 @@ export function FinalCTA() {
     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
       <Link
         href="/auth/signup"
-        className="inline-block bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-10 py-4 rounded-full font-semibold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-emerald-500/25"
+        className="inline-block bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-10 py-4 rounded-full font-semibold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-emerald-500/25"
       >
         Get started free
       </Link>

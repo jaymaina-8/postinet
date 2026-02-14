@@ -57,7 +57,7 @@ export default function Navbar() {
           {signedIn ? (
             <Link
               href="/dashboard"
-              className="text-sm bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity"
+              className="text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity"
             >
               My dashboard
             </Link>
@@ -131,7 +131,7 @@ export default function Navbar() {
                 {signedIn ? (
                   <Link
                     href="/dashboard"
-                    className="text-sm bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity text-center"
+                    className="text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity text-center"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     My dashboard

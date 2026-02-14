@@ -25,7 +25,7 @@ function formatDate(dateString: string) {
 function getStatusBadge(status: string) {
   const styles = {
     failed: "bg-rose-500/20 text-rose-200 border border-rose-500/30",
-    scheduled: "bg-amber-500/20 text-amber-200 border border-amber-500/30",
+    scheduled: "bg-emerald-500/20 text-emerald-200 border border-emerald-500/30",
     published: "bg-emerald-500/20 text-emerald-200 border border-emerald-500/30",
     cancelled: "bg-zinc-500/20 text-zinc-300 border border-zinc-500/30",
     publishing: "bg-blue-500/20 text-blue-200 border border-blue-500/30",

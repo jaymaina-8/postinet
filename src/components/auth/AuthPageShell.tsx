@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 
-const ROTATION_INTERVAL_MS = 5000;
+const ROTATION_INTERVAL_MS = 10000;
 
 export const AUTH_TESTIMONIES = [
   { quote: "Postinet has been crucial in helping me stay consistent. I schedule a week at a time and never miss a post.", authorHandle: "Sarah M. · Content creator", authorAvatar: "https://i.pravatar.cc/200?img=1" },

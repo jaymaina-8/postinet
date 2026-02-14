@@ -163,9 +163,9 @@ function LoginContent() {
         />
         {error && <p className="text-sm text-red-400">{error}</p>}
         {needsConfirmation && (
-          <div className="space-y-3 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
-            <div className="text-sm font-semibold text-amber-200">Email confirmation required</div>
-            <div className="text-sm text-amber-200/90 space-y-3">
+          <div className="space-y-3 p-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+            <div className="text-sm font-semibold text-emerald-200">Email confirmation required</div>
+            <div className="text-sm text-emerald-200/90 space-y-3">
               <p>
                 Check your inbox for a confirmation link, or use the Supabase Dashboard to confirm the user.
               </p>
@@ -182,7 +182,7 @@ function LoginContent() {
               {resendSuccess && (
                 <p className="text-xs text-emerald-400">Confirmation email sent. Check your inbox.</p>
               )}
-              <p className="text-xs pt-2 border-t border-amber-500/20">
+              <p className="text-xs pt-2 border-t border-emerald-500/20">
                 Can&apos;t access email?{" "}
                 <Link href="/auth/signup" className="underline font-medium">Create a new account</Link> (confirmation may be disabled).
               </p>
