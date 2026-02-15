@@ -17,6 +17,8 @@ export default function Navbar() {
     return () => subscription?.unsubscribe();
   }, []);
 
+  const authedHref = (target: string) => (signedIn ? target : `/auth/signup?next=${encodeURIComponent(target)}`);
+
   useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = "hidden";
@@ -41,13 +43,13 @@ export default function Navbar() {
             <Link href="/pricing" className="text-sm text-gray-300 hover:text-white transition-colors">
               Pricing
             </Link>
-            <Link href="/#how-it-works" className="text-sm text-gray-300 hover:text-white transition-colors">
+            <Link href="/features" className="text-sm text-gray-300 hover:text-white transition-colors">
               Features
             </Link>
-            <Link href="/#platforms" className="text-sm text-gray-300 hover:text-white transition-colors">
+            <Link href={authedHref("/dashboard/accounts")} className="text-sm text-gray-300 hover:text-white transition-colors">
               Platforms
             </Link>
-            <Link href="/#how-it-works" className="text-sm text-gray-300 hover:text-white transition-colors">
+            <Link href="/how-it-works" className="text-sm text-gray-300 hover:text-white transition-colors">
               How It Works
             </Link>
           </div>
@@ -57,7 +59,7 @@ export default function Navbar() {
           {signedIn ? (
             <Link
               href="/dashboard"
-              className="text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity"
+              className="text-sm bg-linear-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity"
             >
               My dashboard
             </Link>
@@ -73,7 +75,7 @@ export default function Navbar() {
                 href="/auth/signup"
                 className="text-sm bg-white text-zinc-900 px-4 py-2 rounded-lg font-semibold hover:bg-zinc-100 transition-colors"
               >
-                Sign Up
+                Sign up - It’s FREE
               </Link>
             </>
           )}
@@ -107,21 +109,21 @@ export default function Navbar() {
                 Pricing
               </Link>
               <Link
-                href="/#how-it-works"
+                href="/features"
                 className="text-sm text-gray-300 hover:text-white transition-colors px-2 py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Features
               </Link>
               <Link
-                href="/#platforms"
+                href={authedHref("/dashboard/accounts")}
                 className="text-sm text-gray-300 hover:text-white transition-colors px-2 py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Platforms
               </Link>
               <Link
-                href="/#how-it-works"
+                href="/how-it-works"
                 className="text-sm text-gray-300 hover:text-white transition-colors px-2 py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -131,7 +133,7 @@ export default function Navbar() {
                 {signedIn ? (
                   <Link
                     href="/dashboard"
-                    className="text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity text-center"
+                    className="text-sm bg-linear-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 rounded-full font-medium hover:opacity-90 transition-opacity text-center"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     My dashboard
@@ -150,7 +152,7 @@ export default function Navbar() {
                       className="text-sm bg-white text-zinc-900 px-5 py-2.5 rounded-lg font-semibold hover:bg-zinc-100 transition-colors text-center"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      Sign Up
+                      Sign up - It’s FREE
                     </Link>
                   </>
                 )}

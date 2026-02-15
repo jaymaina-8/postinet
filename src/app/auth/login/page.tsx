@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import supabase from "@/lib/supabaseClient";
-import { getRedirectUrl, isGoogleOAuthDisabled } from "@/lib/auth-utils";
+import { getRedirectUrl, getSafeNext, isGoogleOAuthDisabled } from "@/lib/auth-utils";
 import { AuthPageShell } from "@/components/auth/AuthPageShell";
 import { ContinueWithGoogleButton } from "@/components/auth/ContinueWithGoogleButton";
 import { PasswordInput } from "@/components/auth/PasswordInput";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const next = getSafeNext(searchParams.get("next"), "/dashboard");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,7 +33,7 @@ function LoginContent() {
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
     setError("");
-    const redirectTo = getRedirectUrl("/auth/callback");
+    const redirectTo = getRedirectUrl(`/auth/callback?next=${encodeURIComponent(next)}`);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
@@ -76,9 +77,9 @@ function LoginContent() {
         .single();
 
       if (!profile?.onboarded) {
-        router.push("/onboarding");
+        router.push(`/onboarding?next=${encodeURIComponent(next)}`);
       } else {
-        router.push("/dashboard");
+        router.push(next);
       }
     } else {
       setError("Login failed. Please try again.");
@@ -184,7 +185,7 @@ function LoginContent() {
               )}
               <p className="text-xs pt-2 border-t border-emerald-500/20">
                 Can&apos;t access email?{" "}
-                <Link href="/auth/signup" className="underline font-medium">Create a new account</Link> (confirmation may be disabled).
+                <Link href={`/auth/signup?next=${encodeURIComponent(next)}`} className="underline font-medium">Create a new account</Link> (confirmation may be disabled).
               </p>
             </div>
           </div>
@@ -201,7 +202,10 @@ function LoginContent() {
 
       <p className="text-sm text-zinc-400 mt-6">
         Don&apos;t have an account?{" "}
-        <Link href="/auth/signup" className="text-emerald-400 hover:text-emerald-300 font-medium underline">
+        <Link
+          href={`/auth/signup?next=${encodeURIComponent(next)}`}
+          className="text-emerald-400 hover:text-emerald-300 font-medium underline"
+        >
           Sign up
         </Link>
       </p>

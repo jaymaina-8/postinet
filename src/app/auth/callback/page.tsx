@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
+import { getSafeNext } from "@/lib/auth-utils";
 
 /**
  * OAuth callback: Supabase redirects here after Google (or other provider) sign-in.
@@ -17,7 +18,7 @@ function CallbackContent() {
 
   useEffect(() => {
     async function handleCallback() {
-      const next = searchParams.get("next") ?? "/dashboard";
+      const next = getSafeNext(searchParams.get("next"), "/dashboard");
 
       // PKCE: detectSessionInUrl parses the redirect URL and completes the exchange.
       // Give the client a moment to hydrate; then getSession() returns the session.
@@ -51,7 +52,7 @@ function CallbackContent() {
         .single();
 
       if (!profile?.onboarded) {
-        router.replace("/onboarding");
+        router.replace(`/onboarding?next=${encodeURIComponent(next)}`);
       } else {
         router.replace(next);
       }

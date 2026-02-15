@@ -97,7 +97,7 @@ export default function ChangelogPage() {
         </div>
 
         <div className="mx-auto max-w-[720px] px-4 pt-12">
-          <Link href="/about" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium">
+          <Link href="/blog" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium">
             ← Back to Newsroom
           </Link>
         </div>

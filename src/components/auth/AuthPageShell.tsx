@@ -61,7 +61,7 @@ export function AuthPageShell({
               <Logo showName />
             </Link>
             <Link
-              href="/dashboard/help"
+              href="/help-center"
               className="text-sm text-zinc-400 hover:text-zinc-300 flex items-center gap-1.5 transition-colors"
             >
               <BookIcon className="w-4 h-4" />

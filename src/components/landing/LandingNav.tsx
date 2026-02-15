@@ -14,6 +14,7 @@ const FEATURES = [
     ),
     title: "Schedule posts",
     desc: "Plan a week or a month in one place. Post on time, every time.",
+    href: "/dashboard/schedule",
   },
   {
     icon: (
@@ -23,6 +24,7 @@ const FEATURES = [
     ),
     title: "Upload once",
     desc: "One piece of content. We publish to Facebook and YouTube for you.",
+    href: "/dashboard/create",
   },
   {
     icon: (
@@ -32,6 +34,7 @@ const FEATURES = [
     ),
     title: "Calendar view",
     desc: "See what’s going out and when. No surprises.",
+    href: "/dashboard/schedule",
   },
   {
     icon: (
@@ -41,6 +44,7 @@ const FEATURES = [
     ),
     title: "Multi-platform",
     desc: "Facebook and YouTube today. More platforms coming soon.",
+    href: "/dashboard/accounts",
   },
   {
     icon: (
@@ -50,19 +54,20 @@ const FEATURES = [
     ),
     title: "Reliable delivery",
     desc: "Clear status for every post. Retries when safe. No duplicate posts.",
+    href: "/dashboard/history",
   },
 ];
 
 const SOLUTIONS = [
-  { label: "Creators", desc: "Stay consistent without the stress. Post on schedule while you create." },
-  { label: "Small business", desc: "Keep your pages active without hiring a social manager." },
-  { label: "Marketers", desc: "One place to plan and publish. Less chaos, more control." },
-  { label: "Content teams", desc: "Upload once, publish everywhere. Everyone stays in sync." },
+  { label: "Creators", desc: "Stay consistent without the stress. Post on schedule while you create.", href: "/dashboard" },
+  { label: "Small business", desc: "Keep your pages active without hiring a social manager.", href: "/dashboard" },
+  { label: "Marketers", desc: "One place to plan and publish. Less chaos, more control.", href: "/dashboard" },
+  { label: "Content teams", desc: "Upload once, publish everywhere. Everyone stays in sync.", href: "/dashboard" },
 ];
 
 const RESOURCE_LINKS = [
-  { label: "How it works", href: "#how-it-works" },
-  { label: "Help center", href: "/dashboard/help" },
+  { label: "How it works", href: "/how-it-works" },
+  { label: "Help center", href: "/help-center" },
   { label: "Pricing", href: "/pricing" },
   { label: "Contact", href: "mailto:support@postinet.pro" },
 ];
@@ -110,6 +115,8 @@ export function LandingNav() {
     setOpen(false);
   };
 
+  const authedHref = (target: string) => (signedIn ? target : `/auth/signup?next=${encodeURIComponent(target)}`);
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-14 w-full border-b border-white/5 bg-[#0a0a0a]/95 backdrop-blur-sm">
       <nav ref={navRef} className="flex h-full w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8" aria-label="Main">
@@ -134,13 +141,13 @@ export function LandingNav() {
             {activeDropdown === "features" && (
               <div className="absolute top-full left-0 mt-0.5 w-[480px] rounded-xl border border-zinc-800 bg-zinc-900 shadow-xl py-4 px-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {FEATURES.map((f, i) => (
-                  <a key={i} href="#how-it-works" onClick={closeAll} className="flex gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors text-left">
+                  <Link key={i} href={authedHref(f.href)} onClick={closeAll} className="flex gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors text-left">
                     <span className="text-emerald-400 shrink-0 mt-0.5">{f.icon}</span>
                     <div>
                       <div className="font-medium text-white text-sm">{f.title}</div>
                       <div className="text-xs text-zinc-400 mt-0.5">{f.desc}</div>
                     </div>
-                  </a>
+                  </Link>
                 ))}
               </div>
             )}
@@ -160,10 +167,10 @@ export function LandingNav() {
             {activeDropdown === "solutions" && (
               <div className="absolute top-full left-0 mt-0.5 w-[320px] rounded-xl border border-zinc-800 bg-zinc-900 shadow-xl py-3 px-3">
                 {SOLUTIONS.map((s, i) => (
-                  <a key={i} href="#how-it-works" onClick={closeAll} className="block py-2.5 px-3 rounded-lg hover:bg-white/5 transition-colors">
+                  <Link key={i} href={authedHref(s.href)} onClick={closeAll} className="block py-2.5 px-3 rounded-lg hover:bg-white/5 transition-colors">
                     <div className="font-medium text-white text-sm">{s.label}</div>
                     <div className="text-xs text-zinc-400 mt-0.5">{s.desc}</div>
-                  </a>
+                  </Link>
                 ))}
               </div>
             )}
@@ -214,7 +221,7 @@ export function LandingNav() {
                 onClick={closeAll}
                 className="inline-flex items-center justify-center rounded-lg border border-white bg-white px-3 py-2 sm:px-4 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors"
               >
-                Sign up
+                Sign up - It’s FREE
               </Link>
             </>
           )}
@@ -245,11 +252,11 @@ export function LandingNav() {
           <div className="flex flex-col gap-2">
             <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-2 mb-1">Features</div>
             {FEATURES.map((f, i) => (
-              <a key={i} href="#how-it-works" onClick={closeAll} className="py-2 px-3 rounded-lg text-sm text-zinc-300 hover:bg-white/5">{f.title}</a>
+              <Link key={i} href={authedHref(f.href)} onClick={closeAll} className="py-2 px-3 rounded-lg text-sm text-zinc-300 hover:bg-white/5">{f.title}</Link>
             ))}
             <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-2 mt-2 mb-1">Solutions</div>
             {SOLUTIONS.map((s, i) => (
-              <a key={i} href="#how-it-works" onClick={closeAll} className="py-2 px-3 rounded-lg text-sm text-zinc-300 hover:bg-white/5">{s.label}</a>
+              <Link key={i} href={authedHref(s.href)} onClick={closeAll} className="py-2 px-3 rounded-lg text-sm text-zinc-300 hover:bg-white/5">{s.label}</Link>
             ))}
             <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-2 mt-2 mb-1">Resources</div>
             {RESOURCE_LINKS.map((r) => (
@@ -269,7 +276,7 @@ export function LandingNav() {
                 <>
                   <Link href="/auth/login" onClick={closeAll} className="py-2 px-3 text-sm text-zinc-300">Sign in</Link>
                   <Link href="/auth/signup" onClick={closeAll} className="text-sm border border-white bg-white text-zinc-900 px-4 py-2.5 rounded-lg font-semibold text-center">
-                    Sign up - It&apos;s FREE
+                    Sign up - It’s FREE
                   </Link>
                 </>
               )}

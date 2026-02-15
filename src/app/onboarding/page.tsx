@@ -1,8 +1,9 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import supabase from "@/lib/supabaseClient";
+import { getSafeNext } from "@/lib/auth-utils";
 
 type Frequency = "weekly_1_2" | "weekly_3_5" | "daily" | "multi_daily";
 type Goal = "grow_followers" | "consistency" | "monetize" | "manage_clients";
@@ -105,6 +106,8 @@ function SelectCard({
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = getSafeNext(searchParams.get("next"), "");
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,13 +140,13 @@ export default function OnboardingPage() {
         error: authError,
       } = await supabase.auth.getUser();
       if (!user || authError) {
-        router.push("/auth/login");
+        router.push(next ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login");
         return;
       }
       setCheckingAuth(false);
     }
     checkAuth();
-  }, [router]);
+  }, [router, next]);
 
   useEffect(() => {
     async function loadExisting() {
@@ -250,7 +253,7 @@ export default function OnboardingPage() {
         destination,
       });
 
-      router.push(destination);
+      router.push(next || destination);
     } catch (e: any) {
       setError(e?.message || "Something went wrong.");
     } finally {
@@ -284,7 +287,7 @@ export default function OnboardingPage() {
         skipped: true,
       });
 
-      router.push("/dashboard");
+      router.push(next || "/dashboard");
     } catch (e: any) {
       setError(e?.message || "Something went wrong.");
     } finally {

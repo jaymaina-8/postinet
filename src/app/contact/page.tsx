@@ -15,9 +15,7 @@ const CONTACT_ITEMS = [
         Log in to your Postinet account to contact support and manage your
         connected accounts.{" "}
         <Link href="/auth/login">Log in</Link>. You can also{" "}
-        <Link href="/auth/signup">get started with Postinet</Link> or{" "}
-        <Link href="/dashboard/help">visit the Help center</Link> for guides and
-        FAQs.
+        <Link href="/auth/signup">get started with Postinet</Link>.
       </>
     ),
   },
@@ -92,7 +90,7 @@ export default function ContactPage() {
           <p className="mt-3 text-xs text-zinc-500">No credit card required.</p>
           <p className="mt-2">
             <Link
-              href="/#how-it-works"
+              href="/how-it-works"
               className="text-sm text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
             >
               See how it works

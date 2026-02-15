@@ -78,7 +78,7 @@ export default function SmallTeamsSaveTimePage() {
         </div>
 
         <div className="mx-auto max-w-[720px] px-4 pt-12 flex flex-wrap gap-4">
-          <Link href="/about" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium">
+          <Link href="/blog" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium">
             ← Back to Newsroom
           </Link>
           <Link href="/blog" className="text-zinc-400 hover:text-white text-sm font-medium">

@@ -31,6 +31,24 @@ export function getRedirectUrl(path: string = "/auth/callback"): string {
 }
 
 /**
+ * Safely parse a "next" (internal) redirect path.
+ * Prevents open redirects by only allowing absolute-in-app paths like "/dashboard".
+ */
+export function getSafeNext(next: string | null | undefined, fallback: string = "/dashboard"): string {
+  if (!next) return fallback;
+
+  const trimmed = next.trim();
+  if (!trimmed) return fallback;
+
+  // Only allow internal absolute paths.
+  // Reject protocol-relative URLs ("//evil.com") and any full URLs.
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return fallback;
+  if (trimmed.includes("://")) return fallback;
+
+  return trimmed;
+}
+
+/**
  * Whether Google OAuth should be disabled (e.g. missing APP_URL in prod).
  */
 export function isGoogleOAuthDisabled(): boolean {

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import supabase from "@/lib/supabaseClient";
-import { getRedirectUrl, isGoogleOAuthDisabled } from "@/lib/auth-utils";
+import { getRedirectUrl, getSafeNext, isGoogleOAuthDisabled } from "@/lib/auth-utils";
 import { AuthPageShell } from "@/components/auth/AuthPageShell";
 import { ContinueWithGoogleButton } from "@/components/auth/ContinueWithGoogleButton";
 import { PasswordInput } from "@/components/auth/PasswordInput";
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = getSafeNext(searchParams.get("next"), "/dashboard");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,7 +26,7 @@ export default function SignupPage() {
   async function handleGoogleSignUp() {
     setGoogleLoading(true);
     setError("");
-    const redirectTo = getRedirectUrl("/auth/callback");
+    const redirectTo = getRedirectUrl(`/auth/callback?next=${encodeURIComponent(next)}`);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
@@ -51,7 +53,7 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        emailRedirectTo: `${(process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || window.location.origin)}/dashboard`,
+        emailRedirectTo: getRedirectUrl(`/auth/callback?next=${encodeURIComponent(next)}`),
       },
     });
 
@@ -68,7 +70,7 @@ export default function SignupPage() {
         setLoading(false);
         return;
       }
-      router.push("/onboarding");
+      router.push(`/onboarding?next=${encodeURIComponent(next)}`);
     } else {
       setError("Signup failed. Please try again.");
     }
@@ -87,7 +89,7 @@ export default function SignupPage() {
       type: "signup",
       email,
       options: {
-        emailRedirectTo: `${(process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || window.location.origin)}/dashboard`,
+        emailRedirectTo: getRedirectUrl(`/auth/callback?next=${encodeURIComponent(next)}`),
       },
     });
     setResendLoading(false);
@@ -174,7 +176,10 @@ export default function SignupPage() {
 
       <p className="text-sm text-zinc-400 mt-6">
         Have an account?{" "}
-        <Link href="/auth/login" className="text-emerald-400 hover:text-emerald-300 font-medium underline">
+        <Link
+          href={`/auth/login?next=${encodeURIComponent(next)}`}
+          className="text-emerald-400 hover:text-emerald-300 font-medium underline"
+        >
           Sign in
         </Link>
       </p>

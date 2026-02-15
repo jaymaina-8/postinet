@@ -53,12 +53,12 @@ export function Hero() {
                 >
                   Get started free
                 </Link>
-                <a
-                  href="#how-it-works"
+                <Link
+                  href="/how-it-works"
                   className="w-full sm:w-auto rounded-lg border border-zinc-600 text-zinc-300 px-6 py-3.5 text-base font-medium hover:border-zinc-500 hover:text-white transition-colors text-center"
                 >
                   See how it works
-                </a>
+                </Link>
               </>
             )}
           </div>

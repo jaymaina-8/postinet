@@ -39,36 +39,6 @@ const VALUES = [
   },
 ];
 
-const PRESS = [
-  {
-    title: "Postinet launches cross-platform scheduling",
-    excerpt: "One place to schedule and publish to Facebook and YouTube.",
-    source: "Product Hunt",
-    date: "2024",
-    href: "/news/launch",
-    badge: "Launch",
-    badgeStyle: "emerald",
-  },
-  {
-    title: "How small teams save 5+ hours a week",
-    excerpt: "Real stories from creators who switched to Postinet.",
-    source: "Creator blog",
-    date: "2024",
-    href: "/blog/small-teams-save-time",
-    badge: "Tips",
-    badgeStyle: "emerald",
-  },
-  {
-    title: "Facebook & YouTube in one dashboard",
-    excerpt: "See what’s new in the latest release.",
-    source: "Changelog",
-    date: "2024",
-    href: "/news/changelog",
-    badge: "Product",
-    badgeStyle: "emerald",
-  },
-];
-
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
@@ -93,9 +63,9 @@ export default function AboutPage() {
         {/* Stats strip */}
         <section className="py-10 sm:py-14 px-4 border-y border-white/5">
           <div className="mx-auto max-w-[1100px]">
-            <div className="grid grid-cols-3 gap-8 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center divide-y divide-white/5 sm:divide-y-0 sm:divide-x">
               {STATS.map(({ value, label }) => (
-                <div key={label}>
+                <div key={label} className="py-3 sm:py-0">
                   <div className="text-2xl sm:text-3xl font-bold text-emerald-400 tabular-nums">{value}</div>
                   <div className="mt-1 text-sm text-zinc-500">{label}</div>
                 </div>
@@ -119,8 +89,10 @@ export default function AboutPage() {
                   We built Postinet so you can focus on creating. Set your calendar once, and we’ll make sure it goes out exactly when you said it would.
                 </p>
               </div>
-              <div className="flex justify-center">
-                <HeroOrbitAnimation variant="dark" showFloatingCards={false} />
+              <div className="flex justify-center md:justify-end">
+                <div className="w-full max-w-[520px]">
+                  <HeroOrbitAnimation variant="dark" showFloatingCards={false} />
+                </div>
               </div>
             </div>
           </div>
@@ -135,7 +107,7 @@ export default function AboutPage() {
             <p className="text-zinc-500 text-center text-sm mb-10 max-w-lg mx-auto">
               The principles that shape how we build Postinet AI
             </p>
-            <div className="grid sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {VALUES.map((v, i) => (
                 <div
                   key={i}
@@ -157,58 +129,6 @@ export default function AboutPage() {
                   <p className="text-sm text-zinc-400 leading-relaxed">{v.description}</p>
                 </div>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Newsroom — customized press cards with accent stripe + excerpt */}
-        <section className="py-14 sm:py-20 px-4 border-t border-white/5">
-          <div className="mx-auto max-w-[1100px]">
-            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400/80 text-center mb-2">
-              Press & updates
-            </p>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-2">
-              Newsroom
-            </h2>
-            <p className="text-zinc-500 text-center text-sm mb-12 max-w-md mx-auto">
-              Updates, launches, and stories from the Postinet team
-            </p>
-            <div className="grid sm:grid-cols-3 gap-6">
-              {PRESS.map((item, i) => {
-                const badgeClass = "text-emerald-400 bg-emerald-500/15 border-emerald-500/30";
-                return (
-                  <Link
-                    key={i}
-                    href={item.href}
-                    className="group relative block rounded-2xl border border-white/10 bg-zinc-900/50 overflow-hidden hover:border-white/20 hover:bg-zinc-800/50 transition-all duration-300"
-                  >
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-500/60 to-emerald-600/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="p-6">
-                      <div className="flex items-center justify-between gap-3 mb-4">
-                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border ${badgeClass}`}>
-                          {item.badge}
-                        </span>
-                        <span className="text-xs text-zinc-500 tabular-nums">{item.date}</span>
-                      </div>
-                      <h3 className="font-semibold text-white text-base sm:text-lg mb-2 group-hover:text-emerald-200 transition-colors line-clamp-2 leading-snug">
-                        {item.title}
-                      </h3>
-                      {"excerpt" in item && item.excerpt && (
-                        <p className="text-sm text-zinc-500 line-clamp-2 mb-4 leading-relaxed">
-                          {item.excerpt}
-                        </p>
-                      )}
-                      <p className="text-xs text-zinc-600 mb-4">{item.source}</p>
-                      <span className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-400 group-hover:gap-3 transition-all">
-                        Read more
-                        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                        </svg>
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
             </div>
           </div>
         </section>

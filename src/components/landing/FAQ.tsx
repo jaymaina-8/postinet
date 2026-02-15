@@ -21,7 +21,7 @@ const ITEMS = [
   },
   {
     q: "I have more questions.",
-    a: "Reach out at support@postinet.pro or use the Help center from your dashboard. We're here to help.",
+    a: "Reach out at support@postinet.pro and we’ll get back to you as soon as we can.",
   },
 ];
 

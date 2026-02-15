@@ -33,7 +33,7 @@ export default function PricingPage() {
               Start free
             </Link>
             <Link
-              href="/#how-it-works"
+              href="/how-it-works"
               className="w-full sm:w-auto rounded-lg border border-zinc-600 px-6 py-3 text-sm font-medium text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors"
             >
               See how it works

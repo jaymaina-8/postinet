@@ -7,16 +7,15 @@ const COMPANY = [
 ];
 
 const PRODUCT = [
-  { label: "Features", href: "/#how-it-works" },
+  { label: "Features", href: "/features" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Help center", href: "/dashboard/help" },
   { label: "Feature Request", href: "/feature-request" },
-  { label: "How does Postinet AI work", href: "/#how-it-works" },
+  { label: "How does Postinet AI work", href: "/how-it-works" },
 ];
 
 const RESOURCES = [
-  { label: "Scheduling tips", href: "/blog#tips" },
-  { label: "Help center", href: "/dashboard/help" },
+  { label: "Scheduling tips", href: "/scheduling-tips" },
+  { label: "Help center", href: "/help-center" },
   { label: "Contact", href: "/contact" },
 ];
 
