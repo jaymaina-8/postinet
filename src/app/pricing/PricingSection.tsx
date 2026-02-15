@@ -6,6 +6,8 @@ import { DashboardCtaLink } from "@/components/auth/DashboardCtaLink";
 
 // Future: plug in real plan IDs / Stripe here. No billing logic yet.
 const CREATOR_MONTHLY_PRICE = 15;
+const YEARLY_DISCOUNT_PCT = 0.2; // 20% off vs monthly
+type BillingPeriod = "monthly" | "yearly";
 
 interface PricingSectionProps {
   freeMonthlyPosts: number;
@@ -13,6 +15,11 @@ interface PricingSectionProps {
 
 export function PricingSection({ freeMonthlyPosts }: PricingSectionProps) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [billing, setBilling] = useState<BillingPeriod>("monthly");
+
+  const creatorYearlyPrice = Math.round(CREATOR_MONTHLY_PRICE * 12 * (1 - YEARLY_DISCOUNT_PCT)); // e.g. 144
+  const creatorMonthlyEquivalent = Math.round((creatorYearlyPrice / 12) * 100) / 100;
+  const creatorSavings = CREATOR_MONTHLY_PRICE * 12 - creatorYearlyPrice;
 
   const faqs: { q: string; a: string }[] = [
     { q: "Can I cancel anytime?", a: "Yes. You can cancel whenever you want. No long-term commitment." },
@@ -27,6 +34,45 @@ export function PricingSection({ freeMonthlyPosts }: PricingSectionProps) {
       {/* Pricing cards — MVP only: Free, Creator (recommended), Team coming soon */}
       <section className="px-4 py-12 sm:px-6 lg:px-8" aria-label="Plans">
         <div className="mx-auto max-w-5xl">
+          {/* Billing toggle */}
+          <div className="flex items-center justify-center mb-8">
+            <div
+              className="inline-flex rounded-xl border border-zinc-800 bg-zinc-950/40 p-1"
+              role="tablist"
+              aria-label="Billing period"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={billing === "monthly"}
+                onClick={() => setBilling("monthly")}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                  billing === "monthly"
+                    ? "bg-white text-zinc-900"
+                    : "text-zinc-300 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={billing === "yearly"}
+                onClick={() => setBilling("yearly")}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                  billing === "yearly"
+                    ? "bg-white text-zinc-900"
+                    : "text-zinc-300 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                Yearly
+                <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                  Save 20%
+                </span>
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {/* Free */}
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 flex flex-col">
@@ -41,12 +87,11 @@ export function PricingSection({ freeMonthlyPosts }: PricingSectionProps) {
                 <li className="text-zinc-500">Postinet AI watermark (if applicable)</li>
                 <li className="text-zinc-500">Limited history</li>
               </ul>
-              <Link
-                href="/auth/signup"
+              <DashboardCtaLink
+                signedOutHref="/auth/signup?next=%2Fdashboard"
+                signedOutText="Get started"
                 className="mt-auto pt-6 w-full rounded-lg border border-zinc-300 bg-white py-3 text-center text-sm font-semibold text-zinc-900 hover:bg-zinc-50 transition-colors"
-              >
-                Get started
-              </Link>
+              />
             </div>
 
             {/* Creator — recommended */}
@@ -56,7 +101,22 @@ export function PricingSection({ freeMonthlyPosts }: PricingSectionProps) {
               </div>
               <h2 className="text-lg font-semibold text-white">Creator</h2>
               <p className="text-sm text-zinc-400 mt-0.5">For consistent creators</p>
-              <p className="mt-4 text-3xl font-semibold text-white">${CREATOR_MONTHLY_PRICE}<span className="text-base font-normal text-zinc-400">/mo</span></p>
+              {billing === "monthly" ? (
+                <p className="mt-4 text-3xl font-semibold text-white">
+                  ${CREATOR_MONTHLY_PRICE}
+                  <span className="text-base font-normal text-zinc-400">/mo</span>
+                </p>
+              ) : (
+                <div className="mt-4">
+                  <p className="text-3xl font-semibold text-white">
+                    ${creatorMonthlyEquivalent}
+                    <span className="text-base font-normal text-zinc-400">/mo</span>
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    Billed yearly at <span className="text-white font-semibold">${creatorYearlyPrice}</span> (save ${creatorSavings})
+                  </p>
+                </div>
+              )}
               <ul className="mt-6 space-y-3 text-sm text-zinc-300">
                 <li>Unlimited posts</li>
                 <li>Facebook + YouTube</li>
@@ -64,12 +124,13 @@ export function PricingSection({ freeMonthlyPosts }: PricingSectionProps) {
                 <li>Bulk upload (early access)</li>
                 <li>Priority posting reliability</li>
               </ul>
-              <Link
-                href="/auth/signup"
+              <DashboardCtaLink
+                signedOutHref="/auth/signup?next=%2Fdashboard%2Fbilling"
+                signedOutText={billing === "yearly" ? "Upgrade (Yearly)" : "Upgrade (Monthly)"}
+                signedInHref="/dashboard/billing"
+                signedInText="Manage billing"
                 className="mt-auto pt-6 w-full rounded-lg border border-zinc-300 bg-white py-3 text-center text-sm font-semibold text-zinc-900 hover:bg-zinc-50 transition-colors"
-              >
-                Upgrade
-              </Link>
+              />
             </div>
 
             {/* Team — coming soon */}
