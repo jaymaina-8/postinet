@@ -1,8 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ReactNode } from "react";
 import "./globals.css";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://postinet.pro";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "Postinet AI - Social Media Management",
@@ -10,24 +15,23 @@ export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   icons: {
     icon: [
-      { url: "/logo.png", type: "image/png", sizes: "32x32" },
-      { url: "/logo.png", type: "image/png", sizes: "192x192" },
+      { url: "/logo.svg", type: "image/svg+xml" },
     ],
-    apple: "/apple-icon.png",
+    // NOTE: We don't ship an apple touch icon yet. Add `/public/apple-icon.png` later if needed.
   },
   openGraph: {
     title: "Postinet AI - Social Media Management",
     description: "Upload once. Schedule or post instantly to Facebook and YouTube.",
     url: appUrl,
     siteName: "Postinet AI",
-    images: [{ url: "/logo.png", width: 512, height: 512, alt: "Postinet AI" }],
+    images: [{ url: "/logo.svg", alt: "Postinet AI" }],
     locale: "en_US",
   },
   twitter: {
     card: "summary",
     title: "Postinet AI",
     description: "Upload once. Schedule or post instantly to Facebook and YouTube.",
-    images: ["/logo.png"],
+    images: ["/logo.svg"],
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -39,8 +43,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body suppressHydrationWarning>
+    <html lang="en" className="h-full bg-[#0a0a0a]">
+      <body className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden" suppressHydrationWarning>
         {children}
       </body>
     </html>

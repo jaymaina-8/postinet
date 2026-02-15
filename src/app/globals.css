@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+html,
+body {
+  background: #0a0a0a;
+  overflow-x: hidden;
+}
+
 /* Social proof marquees — infinite scroll (duplicated content = 50% = one set) */
 @keyframes marquee-creators {
   0% {
