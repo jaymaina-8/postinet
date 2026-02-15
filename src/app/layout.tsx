@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   icons: {
     icon: [
-      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "/logo.png", type: "image/png", sizes: "1024x1024" },
     ],
     // NOTE: We don't ship an apple touch icon yet. Add `/public/apple-icon.png` later if needed.
   },
@@ -24,14 +24,14 @@ export const metadata: Metadata = {
     description: "Upload once. Schedule or post instantly to Facebook and YouTube.",
     url: appUrl,
     siteName: "Postinet AI",
-    images: [{ url: "/logo.svg", alt: "Postinet AI" }],
+    images: [{ url: "/logo.png", width: 1024, height: 1024, alt: "Postinet AI" }],
     locale: "en_US",
   },
   twitter: {
     card: "summary",
     title: "Postinet AI",
     description: "Upload once. Schedule or post instantly to Facebook and YouTube.",
-    images: ["/logo.svg"],
+    images: ["/logo.png"],
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
