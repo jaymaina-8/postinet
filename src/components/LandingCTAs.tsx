@@ -34,7 +34,7 @@ export function HeroCTAs() {
           href="/dashboard"
           className="w-full sm:w-auto bg-linear-to-r from-emerald-500 to-emerald-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-emerald-500/25"
         >
-          My dashboard
+          My Dashboard
         </Link>
         <Link
           href="/how-it-works"
@@ -98,7 +98,7 @@ export function FinalCTA() {
           href="/dashboard"
         className="inline-block bg-linear-to-r from-emerald-500 to-emerald-600 text-white px-10 py-4 rounded-full font-semibold text-lg hover:opacity-90 transition-opacity shadow-lg shadow-emerald-500/25"
         >
-          My dashboard
+          My Dashboard
         </Link>
         <Link
           href="/pricing"

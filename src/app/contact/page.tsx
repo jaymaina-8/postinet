@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingNav, LandingFooter, ContactAccordion } from "@/components/landing";
+import { DashboardCtaLink } from "@/components/auth/DashboardCtaLink";
 
 export const metadata: Metadata = {
   title: "Contact us | Postinet AI",
@@ -80,12 +81,11 @@ export default function ContactPage() {
             and see everything in one dashboard. No credit card required.
           </p>
           <div className="mt-6">
-            <Link
-              href="/auth/signup"
+            <DashboardCtaLink
+              signedOutHref="/auth/signup?next=%2Fdashboard"
+              signedOutText="Get started free"
               className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 transition-colors"
-            >
-              Get started free
-            </Link>
+            />
           </div>
           <p className="mt-3 text-xs text-zinc-500">No credit card required.</p>
           <p className="mt-2">

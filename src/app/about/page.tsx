@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LandingNav } from "@/components/landing";
 import { LandingFooter } from "@/components/landing";
 import { HeroOrbitAnimation } from "@/components/hero";
+import { DashboardCtaLink } from "@/components/auth/DashboardCtaLink";
 
 export const metadata: Metadata = {
   title: "About | Postinet AI",
@@ -143,12 +144,11 @@ export default function AboutPage() {
               Join creators and businesses who schedule once and publish everywhere.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                href="/auth/signup"
+              <DashboardCtaLink
+                signedOutHref="/auth/signup?next=%2Fdashboard"
+                signedOutText="Get started free"
                 className="w-full sm:w-auto rounded-lg bg-white text-zinc-900 px-6 py-3.5 text-base font-semibold hover:bg-zinc-100 transition-colors text-center"
-              >
-                Get started free
-              </Link>
+              />
               <Link
                 href="/"
                 className="w-full sm:w-auto rounded-lg border border-zinc-600 text-zinc-300 px-6 py-3.5 text-base font-medium hover:border-zinc-500 hover:text-white transition-colors text-center"

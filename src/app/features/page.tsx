@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingFooter, LandingNav, CTAStrip } from "@/components/landing";
 import { AuthAwareLink } from "@/components/auth/AuthAwareLink";
+import { DashboardCtaLink } from "@/components/auth/DashboardCtaLink";
 
 export const metadata: Metadata = {
   title: "Features | Postinet AI",
@@ -116,12 +117,11 @@ export default function FeaturesPage() {
               </p>
             </div>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/auth/signup"
+              <DashboardCtaLink
+                signedOutHref="/auth/signup?next=%2Fdashboard"
+                signedOutText="Sign up - It’s FREE"
                 className="w-full sm:w-auto rounded-lg bg-white text-zinc-900 px-6 py-3.5 text-base font-semibold hover:bg-zinc-100 transition-colors text-center"
-              >
-                Sign up - It’s FREE
-              </Link>
+              />
               <Link
                 href="/how-it-works"
                 className="w-full sm:w-auto rounded-lg border border-zinc-600 text-zinc-300 px-6 py-3.5 text-base font-medium hover:border-zinc-500 hover:text-white transition-colors text-center"
@@ -218,12 +218,11 @@ export default function FeaturesPage() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <Link
-                  href="/auth/signup"
+                <DashboardCtaLink
+                  signedOutHref="/auth/signup?next=%2Fdashboard"
+                  signedOutText="Sign up - It’s FREE"
                   className="w-full md:w-auto rounded-lg bg-white text-zinc-900 px-6 py-3 text-sm font-semibold hover:bg-zinc-100 transition-colors text-center"
-                >
-                  Sign up - It’s FREE
-                </Link>
+                />
                 <Link
                   href="/scheduling-tips"
                   className="w-full md:w-auto rounded-lg border border-zinc-600 px-6 py-3 text-sm font-medium text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors text-center"

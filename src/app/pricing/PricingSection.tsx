@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { DashboardCtaLink } from "@/components/auth/DashboardCtaLink";
 
 // Future: plug in real plan IDs / Stripe here. No billing logic yet.
 const CREATOR_MONTHLY_PRICE = 15;
@@ -157,12 +158,11 @@ export function PricingSection({ freeMonthlyPosts }: PricingSectionProps) {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-semibold text-white">Ready to simplify your posting?</h2>
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/auth/signup"
+            <DashboardCtaLink
+              signedOutHref="/auth/signup?next=%2Fdashboard"
+              signedOutText="Start free"
               className="w-full sm:w-auto rounded-lg border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 transition-colors"
-            >
-              Start free
-            </Link>
+            />
             <Link
               href="/dashboard"
               className="w-full sm:w-auto rounded-lg border border-zinc-600 px-6 py-3 text-sm font-medium text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors"

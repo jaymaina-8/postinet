@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DashboardCtaLink } from "@/components/auth/DashboardCtaLink";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -10,7 +11,7 @@ export default function Footer() {
           {/* Brand Section */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded bg-gradient-to-br from-blue-500 to-purple-600"></div>
+              <div className="h-8 w-8 rounded bg-linear-to-br from-blue-500 to-purple-600"></div>
               <h3 className="text-xl font-semibold text-white">Postinet AI</h3>
             </div>
             <p className="text-sm leading-relaxed">
@@ -81,12 +82,11 @@ export default function Footer() {
 
         {/* Bottom Row */}
         <div className="mt-12 border-t border-gray-800 pt-8 text-center space-y-4">
-          <Link
-            href="/auth/signup"
+          <DashboardCtaLink
+            signedOutHref="/auth/signup?next=%2Fdashboard"
+            signedOutText="Get started free"
             className="inline-block rounded-lg border border-zinc-400 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 transition-colors"
-          >
-            Get started free
-          </Link>
+          />
           <p className="text-xs text-gray-500">
             © {currentYear} Postinet AI. All rights reserved.
           </p>

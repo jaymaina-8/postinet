@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingFooter, LandingNav, CTAStrip } from "@/components/landing";
 import { HeroOrbitAnimation } from "@/components/hero";
+import { DashboardCtaLink } from "@/components/auth/DashboardCtaLink";
 
 export const metadata: Metadata = {
   title: "How it works | Postinet AI",
@@ -73,12 +74,11 @@ export default function HowItWorksPage() {
                   Postinet AI is built to make posting feel calm: connect your accounts once, upload in one place, and schedule to Facebook and YouTube with a clear status for each platform.
                 </p>
                 <div className="mt-7 flex flex-col sm:flex-row gap-3">
-                  <Link
-                    href="/auth/signup"
+                  <DashboardCtaLink
+                    signedOutHref="/auth/signup?next=%2Fdashboard"
+                    signedOutText="Get started free"
                     className="w-full sm:w-auto rounded-lg bg-white text-zinc-900 px-6 py-3.5 text-base font-semibold hover:bg-zinc-100 transition-colors text-center"
-                  >
-                    Get started free
-                  </Link>
+                  />
                   <Link
                     href="/pricing"
                     className="w-full sm:w-auto rounded-lg border border-zinc-600 text-zinc-300 px-6 py-3.5 text-base font-medium hover:border-zinc-500 hover:text-white transition-colors text-center"
@@ -231,12 +231,11 @@ export default function HowItWorksPage() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <Link
-                  href="/auth/signup"
+                <DashboardCtaLink
+                  signedOutHref="/auth/signup?next=%2Fdashboard"
+                  signedOutText="Start free"
                   className="w-full md:w-auto rounded-lg bg-white text-zinc-900 px-6 py-3 text-sm font-semibold hover:bg-zinc-100 transition-colors text-center"
-                >
-                  Start free
-                </Link>
+                />
                 <Link
                   href="/"
                   className="w-full md:w-auto rounded-lg border border-zinc-600 px-6 py-3 text-sm font-medium text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors text-center"

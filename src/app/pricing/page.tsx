@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingNav, LandingFooter } from "@/components/landing";
 import { PricingSection } from "./PricingSection";
+import { DashboardCtaLink } from "@/components/auth/DashboardCtaLink";
 
 export const metadata: Metadata = {
   title: "Pricing | Postinet AI",
@@ -26,12 +27,11 @@ export default function PricingPage() {
             Upload once. Schedule everywhere. No surprises.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/auth/signup"
+            <DashboardCtaLink
+              signedOutHref="/auth/signup?next=%2Fdashboard"
+              signedOutText="Start free"
               className="w-full sm:w-auto rounded-lg border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 transition-colors"
-            >
-              Start free
-            </Link>
+            />
             <Link
               href="/how-it-works"
               className="w-full sm:w-auto rounded-lg border border-zinc-600 px-6 py-3 text-sm font-medium text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors"

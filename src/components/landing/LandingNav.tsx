@@ -209,7 +209,7 @@ export function LandingNav() {
         <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
           {signedIn ? (
             <Link href="/dashboard" onClick={closeAll} className="text-sm text-zinc-300 hover:text-white transition-colors">
-              My dashboard
+              My Dashboard
             </Link>
           ) : (
             <>
@@ -270,7 +270,7 @@ export function LandingNav() {
             <div className="border-t border-white/5 mt-3 pt-3 flex flex-col gap-2">
               {signedIn ? (
                 <Link href="/dashboard" onClick={closeAll} className="text-sm bg-emerald-500 text-white px-4 py-2.5 rounded-lg font-medium text-center">
-                  My dashboard
+                  My Dashboard
                 </Link>
               ) : (
                 <>

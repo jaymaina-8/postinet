@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LandingFooter, LandingNav, CTAStrip } from "@/components/landing";
+import { DashboardCtaLink } from "@/components/auth/DashboardCtaLink";
 
 export const metadata: Metadata = {
   title: "Help Center | Postinet AI",
@@ -69,12 +70,11 @@ export default function HelpCenterPage() {
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            <Link
-              href="/auth/login"
+            <DashboardCtaLink
+              signedOutHref="/auth/login?next=%2Fdashboard"
+              signedOutText="Sign in"
               className="w-full sm:w-auto rounded-lg bg-white text-zinc-900 px-6 py-3.5 text-base font-semibold hover:bg-zinc-100 transition-colors text-center"
-            >
-              Sign in
-            </Link>
+            />
             <Link
               href="/feature-request"
               className="w-full sm:w-auto rounded-lg border border-zinc-600 text-zinc-300 px-6 py-3.5 text-base font-medium hover:border-zinc-500 hover:text-white transition-colors text-center"

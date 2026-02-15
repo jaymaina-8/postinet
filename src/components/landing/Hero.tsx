@@ -43,7 +43,7 @@ export function Hero() {
                 href="/dashboard"
                 className="w-full sm:w-auto rounded-lg bg-white text-zinc-900 px-6 py-3.5 text-base font-semibold hover:bg-zinc-100 transition-colors text-center"
               >
-                My dashboard
+                My Dashboard
               </Link>
             ) : (
               <>
