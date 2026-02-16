@@ -11,7 +11,8 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
  */
 export async function GET(req: NextRequest) {
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin;
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin;
 
     // Get authorization code from query params
     const { searchParams } = new URL(req.url);
@@ -42,7 +43,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(dashboardUrl);
     }
 
-    const redirectUri = `${appUrl}/api/youtube/exchange`;
+    let redirectUri = process.env.YOUTUBE_REDIRECT_URI?.trim();
+    if (!redirectUri) {
+      redirectUri = `${appUrl}/api/youtube/exchange`;
+    }
     const clientId = process.env.GOOGLE_CLIENT_ID?.trim() || '';
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim() || '';
     const hasClientId = Boolean(clientId);

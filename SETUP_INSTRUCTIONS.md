@@ -73,6 +73,8 @@ FACEBOOK_REDIRECT_URI=http://localhost:3000/api/facebook/exchange
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+# Recommended (prevents redirect_uri_mismatch across domains/environments)
+YOUTUBE_REDIRECT_URI=http://localhost:3000/api/youtube/exchange
 
 # OpenAI (for content generation)
 OPENAI_API_KEY=your_openai_api_key

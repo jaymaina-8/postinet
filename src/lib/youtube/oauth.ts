@@ -12,6 +12,7 @@ export function validateYouTubeEnv(): void {
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const redirectUri = process.env.YOUTUBE_REDIRECT_URI?.trim();
 
   const missing: string[] = [];
 
@@ -23,8 +24,10 @@ export function validateYouTubeEnv(): void {
     missing.push('GOOGLE_CLIENT_SECRET');
   }
 
-  if (!appUrl) {
-    missing.push('NEXT_PUBLIC_APP_URL');
+  // We can build the redirect URI from NEXT_PUBLIC_APP_URL, but if you set
+  // YOUTUBE_REDIRECT_URI explicitly, NEXT_PUBLIC_APP_URL is not required.
+  if (!redirectUri && !appUrl) {
+    missing.push('YOUTUBE_REDIRECT_URI (or NEXT_PUBLIC_APP_URL)');
   }
 
   if (missing.length > 0) {

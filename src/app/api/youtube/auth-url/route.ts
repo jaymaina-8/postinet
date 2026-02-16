@@ -26,8 +26,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin;
-    const redirectUri = `${appUrl}/api/youtube/exchange`;
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.trim()?.replace(/\/$/, '') || req.nextUrl.origin;
+    let redirectUri = process.env.YOUTUBE_REDIRECT_URI?.trim();
+    if (!redirectUri) {
+      redirectUri = `${appUrl}/api/youtube/exchange`;
+    }
 
     const authUrl = getYouTubeAuthUrl(redirectUri);
     return NextResponse.json({ url: authUrl });
