@@ -49,8 +49,13 @@ export function getSafeNext(next: string | null | undefined, fallback: string = 
 }
 
 /**
- * Whether Google OAuth should be disabled (e.g. missing APP_URL in prod).
+ * Whether Google OAuth should be disabled.
+ *
+ * Google OAuth itself is handled by Supabase, so this should only be disabled
+ * if Supabase browser env is missing. (It should NOT depend on NEXT_PUBLIC_APP_URL.)
  */
 export function isGoogleOAuthDisabled(): boolean {
-  return isProd && !process.env.NEXT_PUBLIC_APP_URL;
+  const hasSupabaseEnv =
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return !hasSupabaseEnv;
 }

@@ -15,66 +15,62 @@ import Topbar from "@/components/dashboard/Topbar";
 import MobileSidebarDrawer from "@/components/dashboard/MobileSidebarDrawer";
 import BottomNav from "@/components/dashboard/BottomNav";
 
+type AuthState = "loading" | "authed" | "unauthed";
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authState, setAuthState] = useState<AuthState>("loading");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function checkAuth() {
       try {
-        // Wait for session to be fully loaded before checking auth
-        // This prevents premature redirects during OAuth callback hydration
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.warn('Session check error:', sessionError);
+        // Hydration-safe: do not redirect until we've given session restoration time.
+        setAuthState("loading");
+
+        let {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        // Retry a couple times (OAuth callback → dashboard can race cookie/session restoration)
+        if (!session) {
+          await new Promise((r) => setTimeout(r, 300));
+          const retry1 = await supabase.auth.getSession();
+          session = retry1.data.session;
+        }
+        if (!session) {
+          await new Promise((r) => setTimeout(r, 500));
+          const retry2 = await supabase.auth.getSession();
+          session = retry2.data.session;
         }
 
-        // If no session, check if user exists (might be during OAuth callback)
         if (!session) {
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-          if (userError || !user) {
-            console.warn('Auth check failed - no session or user:', userError);
-            router.push("/auth/login");
-            return;
-          }
-          // User exists but no session - wait a bit for session hydration
-          // This can happen during OAuth callback before cookies are set
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const { data: { session: retrySession } } = await supabase.auth.getSession();
-          if (!retrySession) {
-            router.push("/auth/login");
-            return;
-          }
-        }
-        
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) {
-          console.warn('Auth check failed:', error);
-          router.push("/auth/login");
+          if (!cancelled) setAuthState("unauthed");
           return;
         }
-        
+
+        const user = session.user;
+
         // Check onboarding status
         const { data: profile, error: profileError } = await supabase
           .from("user_profile")
           .select("onboarding_complete,onboarding_testing,onboarding_platforms,onboarded")
           .eq("id", user.id)
           .single();
-        
+
         if (profileError) {
-          console.warn('Profile fetch error:', profileError);
-          // If profile doesn't exist, redirect to onboarding
-          router.push("/onboarding");
+          console.warn("Profile fetch error:", profileError);
+          router.replace("/onboarding");
           return;
         }
-        
-        const onboardingComplete = (profile as any)?.onboarding_complete ?? (profile as any)?.onboarded ?? false;
+
+        const onboardingComplete =
+          (profile as any)?.onboarding_complete ?? (profile as any)?.onboarded ?? false;
         if (!onboardingComplete) {
-          router.push("/onboarding");
+          router.replace("/onboarding");
           return;
         }
 
@@ -104,30 +100,39 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               : Promise.resolve({ data: [] as any[] }),
           ]);
 
-          const fbConnected = (fbRows || []).some((r: any) => r.facebook_page_access_token != null);
+          const fbConnected = (fbRows || []).some(
+            (r: any) => r.facebook_page_access_token != null
+          );
           const ytConnected = (ytRows || []).length > 0;
           const hasAny = fbConnected || ytConnected;
 
           if (!hasAny) {
-            router.push("/dashboard/accounts?onboarding=1");
+            router.replace("/dashboard/accounts?onboarding=1");
             return;
           }
         }
-        
-        setIsAuthenticated(true);
-        setLoading(false);
+
+        if (!cancelled) setAuthState("authed");
       } catch (error) {
-        console.error('Auth check error:', error);
-        router.push("/auth/login");
+        console.error("Auth check error:", error);
+        if (!cancelled) setAuthState("unauthed");
       }
     }
-    
+
     checkAuth();
+    return () => {
+      cancelled = true;
+    };
   }, [router, pathname]);
+
+  useEffect(() => {
+    if (authState !== "unauthed") return;
+    router.replace("/auth/login");
+  }, [authState, router]);
 
   // CRITICAL: Never redirect during loading - wait for session hydration
   // This prevents redirects during OAuth callback before session is restored
-  if (loading) {
+  if (authState === "loading") {
     return (
       <div className="flex items-center justify-center min-h-screen bg-zinc-950 text-zinc-400">
         <div className="animate-pulse">Loading dashboard...</div>
@@ -136,7 +141,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   // Only redirect if we've confirmed no authentication after loading completes
-  if (!isAuthenticated) {
+  if (authState !== "authed") {
     return null;
   }
 

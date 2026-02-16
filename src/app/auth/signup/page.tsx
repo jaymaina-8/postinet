@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import supabase from "@/lib/supabaseClient";
 import { getRedirectUrl, getSafeNext, isGoogleOAuthDisabled } from "@/lib/auth-utils";
+import { startGoogleOAuth } from "@/lib/auth/google-oauth";
 import { AuthPageShell } from "@/components/auth/AuthPageShell";
 import { ContinueWithGoogleButton } from "@/components/auth/ContinueWithGoogleButton";
 import { PasswordInput } from "@/components/auth/PasswordInput";
@@ -26,16 +27,12 @@ function SignupContent() {
   async function handleGoogleSignUp() {
     setGoogleLoading(true);
     setError("");
-    const redirectTo = getRedirectUrl(`/auth/callback?next=${encodeURIComponent(next)}`);
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
+    const { error: oauthError } = await startGoogleOAuth();
     if (oauthError) {
       if (process.env.NODE_ENV === "development") {
-        console.error("[auth] Google OAuth error:", oauthError.message);
+        console.error("[auth] Google OAuth error:", oauthError);
       }
-      setError(oauthError.message || "Google sign-in failed.");
+      setError(oauthError || "Google sign-in failed.");
       setGoogleLoading(false);
       return;
     }
